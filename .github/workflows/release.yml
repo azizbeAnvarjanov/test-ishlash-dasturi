@@ -7,7 +7,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -42,5 +42,37 @@ jobs:
             if (-not $info.default_branch) { throw "$repo repository bo'sh: avval main branch yarating" }
           }
       - run: npm run typecheck
-      - run: npm run release:server
-      - run: npm run release:student
+      - name: Build Server installer
+        run: npm run dist:server
+      - name: Build Student installer
+        run: npm run dist:student
+      - name: Publish Server update
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/server/package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $repo = "azizbeAnvarjanov/test-server-updates"
+          $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $repo --target $target --title $version --notes "Test Server $version avtomatik yangilanishi"
+          }
+          gh release upload $tag --repo $repo --clobber `
+            "apps/server/release/Test-Server-Setup-$version.exe" `
+            "apps/server/release/Test-Server-Setup-$version.exe.blockmap" `
+            "apps/server/release/latest.yml"
+      - name: Publish Student update
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/student/package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $repo = "azizbeAnvarjanov/test-student-updates"
+          $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo $repo --target $target --title $version --notes "Test Student $version avtomatik yangilanishi"
+          }
+          gh release upload $tag --repo $repo --clobber `
+            "apps/student/release/Test-Student-Setup-$version.exe" `
+            "apps/student/release/Test-Student-Setup-$version.exe.blockmap" `
+            "apps/student/release/latest.yml"

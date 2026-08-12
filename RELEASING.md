@@ -38,4 +38,4 @@ GitHub fine-grained token yarating. Token faqat ikki update repository uchun **C
    git push origin v1.0.1
    ```
 
-Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi. Mavjud tag workflow qayta ishga tushirilsa electron-builder mavjud draft/release'ga fayllarni yuklashga urinadi; bir xil asset allaqachon mavjud bo'lsa update repository'dagi shu release'ni o'chirib qayta ishga tushirish yoki yangi patch versiya chiqarish kerak.
+Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi. Workflow qayta ishga tushirilsa mavjud release saqlanadi va assetlar `--clobber` orqali yangilanadi.
