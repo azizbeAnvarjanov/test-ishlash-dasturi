@@ -32,10 +32,10 @@ GitHub fine-grained token yarating. Token faqat ikki update repository uchun **C
 
    ```powershell
    git add .
-   git commit -m "release: 1.0.1"
+   git commit -m "release: 1.0.2"
    git push origin main
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v1.0.2
+   git push origin v1.0.2
    ```
 
-Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi. Workflow qayta ishga tushirilsa mavjud release saqlanadi va assetlar `--clobber` orqali yangilanadi.
+Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi. Workflow qayta ishga tushirilsa mavjud release saqlanadi, oldingi yoki qisman yuklangan assetlar bittadan almashtiriladi va har bir upload uch martagacha qayta urinadi.

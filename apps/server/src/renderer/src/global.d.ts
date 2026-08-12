@@ -6,6 +6,7 @@ declare global {
   interface Window {
     serverDesktop: {
       getInfo: () => Promise<{ addresses: string[]; dataPath: string; resultsFilePath: string; faceDataPath: string; testsDataPath: string }>
+      checkForUpdates: () => Promise<{ status: 'available' | 'current' | 'busy' | 'unavailable' | 'error'; message: string; currentVersion: string; availableVersion?: string }>
       openDataFolder: () => Promise<string>
       openTestsFolder: () => Promise<{ opened: boolean; error?: string }>
       chooseFaceFolder: () => Promise<{ selected: boolean; directory?: string; error?: string }>

@@ -57,6 +57,12 @@ select:focus { border-color: #3268df; box-shadow: 0 0 0 3px #3268df12; }
 .camera-preview { position: relative; width: 100%; aspect-ratio: 16 / 7; margin-top: 9px; overflow: hidden; border-radius: 9px; background: #07101f; }
 .camera-preview video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .camera-preview > span { position: absolute; inset: 0; display: grid; place-items: center; color: #dbe7f7; background: #07101fcc; font-size: 11px; font-weight: 700; }
+.student-update-settings { margin-bottom: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #cdebd9; border-radius: 10px; background: #f2fbf6; }
+.student-update-settings > div { display: grid; gap: 4px; }
+.student-update-settings strong { color: #275f41; font-size: 11px; }
+.student-update-settings small { color: #678071; font-size: 9px; line-height: 1.4; }
+.student-update-settings button { flex: 0 0 auto; border: 0; border-radius: 8px; padding: 8px 10px; color: #fff; background: #12a85b; font-size: 9px; font-weight: 750; }
+.student-update-settings button:disabled { background: #8dbda2; cursor: wait; }
 .form-error { padding: 10px 12px; margin-bottom: 15px; border-radius: 8px; color: #ba3c47; background: #ffebed; font-size: 12px; }
 
 .center-page { min-height: 100vh; display: grid; place-items: center; padding: 40px; background: radial-gradient(circle at top, #eef4ff, #f6f8fc 48%); }

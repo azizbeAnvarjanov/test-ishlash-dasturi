@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('serverDesktop', {
   getInfo: () => ipcRenderer.invoke('server:get-info'),
+  checkForUpdates: () => ipcRenderer.invoke('server:check-for-updates'),
   openDataFolder: () => ipcRenderer.invoke('server:open-data-folder'),
   openTestsFolder: () => ipcRenderer.invoke('server:open-tests-folder'),
   chooseFaceFolder: () => ipcRenderer.invoke('server:choose-face-folder'),

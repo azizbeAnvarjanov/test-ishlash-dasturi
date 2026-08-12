@@ -3,6 +3,7 @@ import type { ExamSession, ResultReceipt, StudentSubmission } from '@test/shared
 
 contextBridge.exposeInMainWorld('studentDesktop', {
   getInfo: () => ipcRenderer.invoke('student:get-info'),
+  checkForUpdates: () => ipcRenderer.invoke('student:check-for-updates'),
   openResults: () => ipcRenderer.invoke('student:open-results'),
   setExamMode: (enabled: boolean) => ipcRenderer.invoke('student:set-exam-mode', enabled),
   saveDraft: (exam: ExamSession, submission: StudentSubmission) =>

@@ -4,11 +4,58 @@ import electronUpdater from 'electron-updater'
 const { autoUpdater } = electronUpdater
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 
+export interface UpdateCheckResponse {
+  status: 'available' | 'current' | 'busy' | 'blocked' | 'unavailable' | 'error'
+  message: string
+  currentVersion: string
+  availableVersion?: string
+}
+
+export interface UpdateController {
+  checkNow: () => Promise<UpdateCheckResponse>
+}
+
 export const setupAutoUpdate = (
   getWindow: () => BrowserWindow | null,
   isExamActive: () => boolean
-): void => {
-  if (!app.isPackaged) return
+): UpdateController => {
+  let checking = false
+
+  const checkNow = async (): Promise<UpdateCheckResponse> => {
+    const currentVersion = app.getVersion()
+    if (isExamActive()) {
+      return { status: 'blocked', currentVersion, message: 'Faol imtihon paytida yangilanishni boshlash mumkin emas.' }
+    }
+    if (!app.isPackaged) {
+      return { status: 'unavailable', currentVersion, message: 'Yangilanish faqat o‘rnatilgan dasturda tekshiriladi.' }
+    }
+    if (checking) return { status: 'busy', currentVersion, message: 'Yangilanish allaqachon tekshirilmoqda...' }
+
+    checking = true
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      if (result?.isUpdateAvailable) {
+        return {
+          status: 'available',
+          currentVersion,
+          availableVersion: result.updateInfo.version,
+          message: `${result.updateInfo.version} versiyasi topildi. Yuklash oynasidan davom eting.`
+        }
+      }
+      return { status: 'current', currentVersion, message: `Sizda eng yangi ${currentVersion} versiyasi o‘rnatilgan.` }
+    } catch (error) {
+      console.error('Student yangilanishini tekshirishda xato:', error)
+      return {
+        status: 'error',
+        currentVersion,
+        message: error instanceof Error ? `Tekshirishda xato: ${error.message}` : 'Yangilanishni tekshirib bo‘lmadi.'
+      }
+    } finally {
+      checking = false
+    }
+  }
+
+  if (!app.isPackaged) return { checkNow }
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
@@ -50,12 +97,7 @@ export const setupAutoUpdate = (
     console.error('Student auto-update xatosi:', error.message)
   })
 
-  const check = (): void => {
-    if (isExamActive()) return
-    void autoUpdater.checkForUpdates().catch((error: unknown) => {
-      console.error('Student yangilanishini tekshirishda xato:', error)
-    })
-  }
-  setTimeout(check, 8_000)
-  setInterval(check, CHECK_INTERVAL_MS)
+  setTimeout(() => void checkNow(), 8_000)
+  setInterval(() => void checkNow(), CHECK_INTERVAL_MS)
+  return { checkNow }
 }

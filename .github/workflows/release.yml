@@ -53,14 +53,32 @@ jobs:
           $tag = "v$version"
           $repo = "azizbeAnvarjanov/test-server-updates"
           $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
-          gh release view $tag --repo $repo *> $null
-          if ($LASTEXITCODE -ne 0) {
+          $releaseId = gh api "repos/$repo/releases" --paginate --jq ".[] | select(.tag_name == `"$tag`") | .id"
+          if (-not $releaseId) {
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Server $version avtomatik yangilanishi"
+            if ($LASTEXITCODE -ne 0) { throw "Server release yaratilmadi" }
+            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id'
           }
-          gh release upload $tag --repo $repo --clobber `
-            "apps/server/release/Easy-Testing-Server-Setup-$version.exe" `
-            "apps/server/release/Easy-Testing-Server-Setup-$version.exe.blockmap" `
+          $files = @(
+            "apps/server/release/Easy-Testing-Server-Setup-$version.exe",
+            "apps/server/release/Easy-Testing-Server-Setup-$version.exe.blockmap",
             "apps/server/release/latest.yml"
+          )
+          foreach ($file in $files) {
+            $name = Split-Path $file -Leaf
+            $assetIds = gh api "repos/$repo/releases/$releaseId/assets" --paginate --jq ".[] | select(.name == `"$name`") | .id"
+            foreach ($assetId in $assetIds) {
+              gh api --method DELETE "repos/$repo/releases/assets/$assetId"
+            }
+            $uploaded = $false
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              gh release upload $tag $file --repo $repo
+              if ($LASTEXITCODE -eq 0) { $uploaded = $true; break }
+              Write-Warning "$name yuklanmadi. $attempt/3 urinish."
+              Start-Sleep -Seconds (5 * $attempt)
+            }
+            if (-not $uploaded) { throw "$name uch urinishda ham yuklanmadi" }
+          }
       - name: Publish Student update
         shell: pwsh
         run: |
@@ -68,11 +86,29 @@ jobs:
           $tag = "v$version"
           $repo = "azizbeAnvarjanov/test-student-updates"
           $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
-          gh release view $tag --repo $repo *> $null
-          if ($LASTEXITCODE -ne 0) {
+          $releaseId = gh api "repos/$repo/releases" --paginate --jq ".[] | select(.tag_name == `"$tag`") | .id"
+          if (-not $releaseId) {
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Student $version avtomatik yangilanishi"
+            if ($LASTEXITCODE -ne 0) { throw "Student release yaratilmadi" }
+            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id'
           }
-          gh release upload $tag --repo $repo --clobber `
-            "apps/student/release/Easy-Testing-Student-Setup-$version.exe" `
-            "apps/student/release/Easy-Testing-Student-Setup-$version.exe.blockmap" `
+          $files = @(
+            "apps/student/release/Easy-Testing-Student-Setup-$version.exe",
+            "apps/student/release/Easy-Testing-Student-Setup-$version.exe.blockmap",
             "apps/student/release/latest.yml"
+          )
+          foreach ($file in $files) {
+            $name = Split-Path $file -Leaf
+            $assetIds = gh api "repos/$repo/releases/$releaseId/assets" --paginate --jq ".[] | select(.name == `"$name`") | .id"
+            foreach ($assetId in $assetIds) {
+              gh api --method DELETE "repos/$repo/releases/assets/$assetId"
+            }
+            $uploaded = $false
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              gh release upload $tag $file --repo $repo
+              if ($LASTEXITCODE -eq 0) { $uploaded = $true; break }
+              Write-Warning "$name yuklanmadi. $attempt/3 urinish."
+              Start-Sleep -Seconds (5 * $attempt)
+            }
+            if (-not $uploaded) { throw "$name uch urinishda ham yuklanmadi" }
+          }

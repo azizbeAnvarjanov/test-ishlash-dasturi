@@ -1,4 +1,4 @@
-# Easy Testing V10.1 (1.0.1)
+# Easy Testing V10.2 (1.0.2)
 
 Windows lokal tarmog‘ida ishlaydigan ikkita Electron dasturi:
 
@@ -82,8 +82,8 @@ npm.cmd run dist:student
 
 Installerlar:
 
-- `apps/server/release/Easy-Testing-Server-Setup-1.0.1.exe`
-- `apps/student/release/Easy-Testing-Student-Setup-1.0.1.exe`
+- `apps/server/release/Easy-Testing-Server-Setup-1.0.2.exe`
+- `apps/student/release/Easy-Testing-Student-Setup-1.0.2.exe`
 
 GitHub release chiqarish tartibi [RELEASING.md](RELEASING.md) faylida yozilgan.
 

@@ -231,7 +231,8 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-  setupAutoUpdate(() => mainWindow, () => examModeEnabled)
+  const updater = setupAutoUpdate(() => mainWindow, () => examModeEnabled)
+  ipcMain.handle('student:check-for-updates', () => updater.checkNow())
   if (isFirstRun) {
     mainWindow?.once('ready-to-show', () => void shell.openPath(resultsDirectory))
   }

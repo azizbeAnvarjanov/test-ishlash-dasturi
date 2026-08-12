@@ -581,6 +581,8 @@ function Settings(props: {
   const [error, setError] = useState('')
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const [registering, setRegistering] = useState(false)
+  const [updateChecking, setUpdateChecking] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState('Tugmani bosib yangi versiya borligini tekshiring.')
   const [registration, setRegistration] = useState({
     firstName: '',
     lastName: '',
@@ -804,6 +806,19 @@ function Settings(props: {
     }
   }
 
+  const checkForUpdates = async (): Promise<void> => {
+    setUpdateChecking(true)
+    setUpdateMessage('GitHub orqali yangilanish tekshirilmoqda...')
+    try {
+      const result = await window.serverDesktop.checkForUpdates()
+      setUpdateMessage(result.message)
+    } catch (reason) {
+      setUpdateMessage(reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.')
+    } finally {
+      setUpdateChecking(false)
+    }
+  }
+
   return (
     <div className="settings-grid">
       <section className="panel network-access-panel">
@@ -818,6 +833,10 @@ function Settings(props: {
         </div>
         {error && <div className="alert error network-access-error">{error}</div>}
         <div className="settings-footer"><small>Server kompyuterining o‘zi har doim ruxsat etiladi.</small><button className="primary" disabled={saving} onClick={() => void saveNetworkAccess()}>{saving ? 'Saqlanmoqda...' : 'Ulanish ruxsatini saqlash'}</button></div>
+      </section>
+      <section className="panel update-panel">
+        <div className="panel-title"><div><h2>Dastur yangilanishi</h2><p>Easy Testing Server yangi versiyasini tekshiring va yuklab oling</p></div><span className="update-icon">↻</span></div>
+        <div className="update-content"><div><strong>GitHub avtomatik yangilanishi</strong><small>{updateMessage}</small></div><button className="primary" disabled={updateChecking} onClick={() => void checkForUpdates()}>{updateChecking ? 'Tekshirilmoqda...' : 'Yangilanishni tekshirish'}</button></div>
       </section>
       <section className="panel">
         <div className="panel-title"><div><h2>Student ma’lumotini olish</h2><p>Student dasturida F.I.Sh qanday kiritilishini belgilang</p></div></div>

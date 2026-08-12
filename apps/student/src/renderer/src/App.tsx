@@ -564,6 +564,8 @@ function SetupScreen(props: {
   const [cameraLoading, setCameraLoading] = useState(false)
   const [cameraStatus, setCameraStatus] = useState('Kameralar aniqlanmoqda...')
   const [cameraRefreshKey, setCameraRefreshKey] = useState(0)
+  const [updateChecking, setUpdateChecking] = useState(false)
+  const [updateMessage, setUpdateMessage] = useState('Yangi versiyani qo‘lda tekshirishingiz mumkin.')
 
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices || !navigator.mediaDevices?.getUserMedia) {
@@ -633,6 +635,19 @@ function SetupScreen(props: {
     props.selectedCameraId && !cameras.some((camera) => camera.deviceId === props.selectedCameraId)
   )
 
+  const checkForUpdates = async (): Promise<void> => {
+    setUpdateChecking(true)
+    setUpdateMessage('GitHub orqali yangilanish tekshirilmoqda...')
+    try {
+      const result = await window.studentDesktop.checkForUpdates()
+      setUpdateMessage(result.message)
+    } catch (reason) {
+      setUpdateMessage(reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.')
+    } finally {
+      setUpdateChecking(false)
+    }
+  }
+
   return (
     <div className="setup-page">
       <div className="setup-art">
@@ -680,6 +695,10 @@ function SetupScreen(props: {
               {cameraLoading && <span>Kamera ochilmoqda...</span>}
             </div>
             <small>{cameraStatus}</small>
+          </div>
+          <div className="student-update-settings">
+            <div><strong>Dastur yangilanishi</strong><small>{updateMessage}</small></div>
+            <button disabled={updateChecking} onClick={() => void checkForUpdates()}>{updateChecking ? 'Tekshirilmoqda...' : 'Yangilanishni tekshirish'}</button>
           </div>
           <button className="connect-button" disabled={props.connecting} onClick={props.onConnect}>{props.connecting ? 'Ulanmoqda...' : 'Serverga ulanish'} <b>→</b></button>
           <button className="folder-button" onClick={() => void window.studentDesktop.openResults()}>Natijalar papkasini ochish</button>
