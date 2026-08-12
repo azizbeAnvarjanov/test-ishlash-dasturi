@@ -1,0 +1,63 @@
+{
+  "name": "@test/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit",
+    "dist": "npm run build && electron-builder --win nsis",
+    "release": "npm run build && electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "@test/shared": "1.0.0",
+    "@vladmandic/human": "^3.3.6",
+    "electron-updater": "^6.8.9",
+    "express": "^5.1.0",
+    "jszip": "^3.10.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ws": "^8.18.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "42.5.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4"
+  },
+  "build": {
+    "appId": "uz.testishlash.server",
+    "productName": "Test Server",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "Test-Server-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "azizbeAnvarjanov",
+      "repo": "test-server-updates",
+      "releaseType": "release"
+    }
+  }
+}

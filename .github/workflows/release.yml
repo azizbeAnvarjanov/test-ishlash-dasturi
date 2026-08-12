@@ -1,0 +1,34 @@
+name: Publish Windows updates
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.UPDATES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify tag and package versions
+        shell: pwsh
+        run: |
+          $tagVersion = "${{ github.ref_name }}" -replace '^v', ''
+          $serverVersion = (Get-Content apps/server/package.json | ConvertFrom-Json).version
+          $studentVersion = (Get-Content apps/student/package.json | ConvertFrom-Json).version
+          if ("${{ github.ref_type }}" -eq "tag" -and $tagVersion -ne $serverVersion) { throw "Tag $tagVersion va Server $serverVersion mos emas" }
+          if ($serverVersion -ne $studentVersion) { throw "Server va Student versiyalari bir xil bo'lishi kerak" }
+      - run: npm run typecheck
+      - run: npm run release:server
+      - run: npm run release:student
