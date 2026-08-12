@@ -53,12 +53,17 @@ jobs:
           $tag = "v$version"
           $repo = "azizbeAnvarjanov/test-server-updates"
           $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
-          $releaseId = gh api "repos/$repo/releases" --paginate --jq ".[] | select(.tag_name == `"$tag`") | .id"
+          $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id' 2>$null
+          if ($LASTEXITCODE -ne 0) { $releaseId = $null }
           if (-not $releaseId) {
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Server $version avtomatik yangilanishi"
-            if ($LASTEXITCODE -ne 0) { throw "Server release yaratilmadi" }
-            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id'
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Release yaratish javobi muvaffaqiyatsiz. Mavjud release qayta tekshirilmoqda."
+            }
+            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $releaseId) { throw "Server $tag release yaratilmadi yoki topilmadi" }
           }
+          $releaseId = "$releaseId".Trim()
           $files = @(
             "apps/server/release/Easy-Testing-Server-Setup-$version.exe",
             "apps/server/release/Easy-Testing-Server-Setup-$version.exe.blockmap",
@@ -86,12 +91,17 @@ jobs:
           $tag = "v$version"
           $repo = "azizbeAnvarjanov/test-student-updates"
           $target = (gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')
-          $releaseId = gh api "repos/$repo/releases" --paginate --jq ".[] | select(.tag_name == `"$tag`") | .id"
+          $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id' 2>$null
+          if ($LASTEXITCODE -ne 0) { $releaseId = $null }
           if (-not $releaseId) {
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Student $version avtomatik yangilanishi"
-            if ($LASTEXITCODE -ne 0) { throw "Student release yaratilmadi" }
-            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id'
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Release yaratish javobi muvaffaqiyatsiz. Mavjud release qayta tekshirilmoqda."
+            }
+            $releaseId = gh api "repos/$repo/releases/tags/$tag" --jq '.id' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $releaseId) { throw "Student $tag release yaratilmadi yoki topilmadi" }
           }
+          $releaseId = "$releaseId".Trim()
           $files = @(
             "apps/student/release/Easy-Testing-Student-Setup-$version.exe",
             "apps/student/release/Easy-Testing-Student-Setup-$version.exe.blockmap",
