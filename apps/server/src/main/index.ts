@@ -139,7 +139,8 @@ const createWindow = (): void => {
     height: 820,
     minWidth: 1000,
     minHeight: 680,
-    title: 'Test Server',
+    title: 'Easy Testing Server',
+    icon: path.join(__dirname, '../../build/icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),

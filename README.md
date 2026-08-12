@@ -1,9 +1,9 @@
-# Test ishlash dasturi V10 (1.0.0)
+# Easy Testing V10.1 (1.0.1)
 
 Windows lokal tarmog‘ida ishlaydigan ikkita Electron dasturi:
 
-- **Test Server** — test yaratish, studentlarga bir nechta test yuborish, jonli monitor, studentlar ro‘yxati va batafsil natijalar.
-- **Test Student** — serverga ulanish, studentni aniqlash, testni tanlab yuklash va xavfsiz kiosk rejimida ishlash.
+- **Easy Testing Server** — test yaratish, studentlarga bir nechta test yuborish, jonli monitor, studentlar ro‘yxati va batafsil natijalar.
+- **Easy Testing Student** — serverga ulanish, studentni aniqlash, testni tanlab yuklash va xavfsiz kiosk rejimida ishlash.
 
 ## Yangi imkoniyatlar
 
@@ -82,8 +82,8 @@ npm.cmd run dist:student
 
 Installerlar:
 
-- `apps/server/release/Test-Server-Setup-1.0.0.exe`
-- `apps/student/release/Test-Student-Setup-1.0.0.exe`
+- `apps/server/release/Easy-Testing-Server-Setup-1.0.1.exe`
+- `apps/student/release/Easy-Testing-Student-Setup-1.0.1.exe`
 
 GitHub release chiqarish tartibi [RELEASING.md](RELEASING.md) faylida yozilgan.
 

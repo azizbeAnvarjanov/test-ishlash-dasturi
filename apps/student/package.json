@@ -1,6 +1,6 @@
 {
   "name": "@test/student",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
@@ -12,7 +12,7 @@
     "release": "npm run build && electron-builder --win nsis --publish always"
   },
   "dependencies": {
-    "@test/shared": "1.0.0",
+    "@test/shared": "1.0.1",
     "@vladmandic/human": "^3.3.6",
     "electron-updater": "^6.8.9",
     "react": "^19.2.0",
@@ -31,22 +31,31 @@
   },
   "build": {
     "appId": "uz.testishlash.student",
-    "productName": "Test Student",
+    "productName": "Easy Testing Student",
     "directories": {
       "output": "release"
     },
     "files": [
-      "out/**"
+      "out/**",
+      "build/icon.png"
     ],
     "win": {
       "target": "nsis",
-      "artifactName": "Test-Student-Setup-${version}.${ext}"
+      "artifactName": "Easy-Testing-Student-Setup-${version}.${ext}",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "shortcutName": "Easy Testing Student",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installer-sidebar.bmp",
+      "uninstallerSidebar": "build/installer-sidebar.bmp",
+      "installerHeader": "build/installer-header.bmp"
     },
     "publish": {
       "provider": "github",

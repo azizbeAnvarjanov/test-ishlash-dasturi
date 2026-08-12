@@ -14,8 +14,8 @@ export const setupAutoUpdate = (getWindow: () => BrowserWindow | null): void => 
     if (!window || window.isDestroyed()) return
     const answer = await dialog.showMessageBox(window, {
       type: 'info',
-      title: 'Yangi Server versiyasi',
-      message: `Test Server ${info.version} versiyasi mavjud.`,
+      title: 'Yangi Easy Testing Server versiyasi',
+      message: `Easy Testing Server ${info.version} versiyasi mavjud.`,
       detail: 'Yangilanishni hozir yuklab olasizmi?',
       buttons: ['Yuklab olish', 'Keyinroq'],
       defaultId: 0,
@@ -31,7 +31,7 @@ export const setupAutoUpdate = (getWindow: () => BrowserWindow | null): void => 
     const answer = await dialog.showMessageBox(window, {
       type: 'question',
       title: 'Yangilanish tayyor',
-      message: `Test Server ${info.version} yuklandi.`,
+      message: `Easy Testing Server ${info.version} yuklandi.`,
       detail: 'Server yopilib, yangi versiya o‘rnatiladi. Faol imtihon bo‘lmasa hozir o‘rnating.',
       buttons: ['Hozir o‘rnatish', 'Keyinroq'],
       defaultId: 0,

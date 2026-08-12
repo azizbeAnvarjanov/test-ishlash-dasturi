@@ -637,8 +637,8 @@ function SetupScreen(props: {
     <div className="setup-page">
       <div className="setup-art">
         <div className="art-content">
-          <div className="logo white">T</div>
-          <h1>Test ishlash dasturi</h1>
+          <img className="student-wordmark" src="/branding/logo.png" alt="Easy Testing Student" />
+          <h1>Easy Testing Student</h1>
           <p>Avval serverga ulaning. Keyin student va ishlanadigan test alohida tanlanadi.</p>
           <div className="feature"><span>✓</span><div><strong>Xavfsiz test rejimi</strong><small>Test paytida chiqish va klavish kombinatsiyalari bloklanadi</small></div></div>
           <div className="feature"><span>✓</span><div><strong>Jonli monitoring</strong><small>Jarayon serverda savolma-savol ko‘rinadi</small></div></div>
@@ -951,7 +951,7 @@ function TestSelectionScreen(props: {
   return (
     <div className="selection-page">
       <header className="selection-header">
-        <div className="exam-brand"><div className="logo">T</div><div><strong>Test ishlash dasturi</strong><span>Testni tanlash</span></div></div>
+        <div className="exam-brand"><img className="exam-brand-logo" src="/branding/logo.png" alt="Easy Testing Student" /><div><strong>Easy Testing Student</strong><span>Testni tanlash</span></div></div>
         <div className="selection-user"><div><strong>{props.identity.fish}</strong><small>{props.identity.group} · {props.identity.computerName}</small></div><button onClick={props.onChangeStudent}>O‘zgartirish</button></div>
       </header>
       <main className="selection-content">
@@ -1199,7 +1199,7 @@ function ExamScreen(props: {
   return (
     <div className="exam-page">
       <header className="exam-header">
-        <div className="exam-brand"><div className="logo">T</div><div><strong>Test ishlash dasturi</strong><span>{props.exam.test.title}</span></div></div>
+        <div className="exam-brand"><img className="exam-brand-logo" src="/branding/logo.png" alt="Easy Testing Student" /><div><strong>Easy Testing Student</strong><span>{props.exam.test.title}</span></div></div>
         <div className="exam-status"><span className={props.connected ? 'network online-net' : 'network offline-net'}>● {props.connected ? 'Serverga ulangan' : 'Oflayn — javoblar saqlanmoqda'}</span><div className={props.secondsLeft <= 120 ? 'timer warning' : 'timer'}><small>Qolgan vaqt</small><strong>{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</strong></div></div>
       </header>
       <div className="progress-line"><div style={{ width: `${progress}%` }} /></div>

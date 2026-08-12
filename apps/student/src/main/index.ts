@@ -76,7 +76,8 @@ const createWindow = (): void => {
     height: 780,
     minWidth: 940,
     minHeight: 650,
-    title: 'Test ishlash dasturi',
+    title: 'Easy Testing Student',
+    icon: path.join(__dirname, '../../build/icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),

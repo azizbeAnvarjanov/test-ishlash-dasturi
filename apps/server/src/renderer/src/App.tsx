@@ -228,7 +228,7 @@ function App(): React.JSX.Element {
   return (
     <div className="server-shell">
       <header className="server-header">
-        <div className="server-brand"><div className="brand-mark">T</div><div><strong>Test Server</strong><span>O‘qituvchi boshqaruv paneli</span></div></div>
+        <div className="server-brand"><img className="brand-logo" src="/branding/logo.png" alt="Easy Testing Server" /><div><strong>Easy Testing Server</strong><span>O‘qituvchi boshqaruv paneli</span></div></div>
         <nav className="top-tabs">
           <TabButton active={tab === 'monitor'} label="Monitor" count={working.length + faceEnrollmentRequests.length} onClick={() => setTab('monitor')} />
           <TabButton active={tab === 'tests'} label="Testlar" count={tests.length} onClick={() => setTab('tests')} />

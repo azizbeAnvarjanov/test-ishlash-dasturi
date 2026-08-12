@@ -18,8 +18,8 @@ export const setupAutoUpdate = (
     if (!window || window.isDestroyed()) return
     const answer = await dialog.showMessageBox(window, {
       type: 'info',
-      title: 'Yangi Student versiyasi',
-      message: `Test Student ${info.version} versiyasi mavjud.`,
+      title: 'Yangi Easy Testing Student versiyasi',
+      message: `Easy Testing Student ${info.version} versiyasi mavjud.`,
       detail: 'Yangilanishni hozir yuklab olasizmi?',
       buttons: ['Yuklab olish', 'Keyinroq'],
       defaultId: 0,
@@ -36,7 +36,7 @@ export const setupAutoUpdate = (
     const answer = await dialog.showMessageBox(window, {
       type: 'question',
       title: 'Yangilanish tayyor',
-      message: `Test Student ${info.version} yuklandi.`,
+      message: `Easy Testing Student ${info.version} yuklandi.`,
       detail: 'Dastur yopilib, yangi versiya o‘rnatiladi.',
       buttons: ['Hozir o‘rnatish', 'Keyinroq'],
       defaultId: 0,

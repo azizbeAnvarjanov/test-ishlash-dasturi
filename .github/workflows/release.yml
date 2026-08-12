@@ -58,8 +58,8 @@ jobs:
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Server $version avtomatik yangilanishi"
           }
           gh release upload $tag --repo $repo --clobber `
-            "apps/server/release/Test-Server-Setup-$version.exe" `
-            "apps/server/release/Test-Server-Setup-$version.exe.blockmap" `
+            "apps/server/release/Easy-Testing-Server-Setup-$version.exe" `
+            "apps/server/release/Easy-Testing-Server-Setup-$version.exe.blockmap" `
             "apps/server/release/latest.yml"
       - name: Publish Student update
         shell: pwsh
@@ -73,6 +73,6 @@ jobs:
             gh release create $tag --repo $repo --target $target --title $version --notes "Test Student $version avtomatik yangilanishi"
           }
           gh release upload $tag --repo $repo --clobber `
-            "apps/student/release/Test-Student-Setup-$version.exe" `
-            "apps/student/release/Test-Student-Setup-$version.exe.blockmap" `
+            "apps/student/release/Easy-Testing-Student-Setup-$version.exe" `
+            "apps/student/release/Easy-Testing-Student-Setup-$version.exe.blockmap" `
             "apps/student/release/latest.yml"

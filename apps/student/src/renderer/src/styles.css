@@ -12,6 +12,8 @@ button { cursor: pointer; }
 
 .setup-page { min-height: 100vh; display: grid; grid-template-columns: minmax(400px, .9fr) minmax(480px, 1.1fr); background: #fff; }
 .setup-art { position: relative; overflow: hidden; display: grid; place-items: center; padding: 60px; color: #fff; background: linear-gradient(145deg, #173ca4, #2f67db 58%, #5c7fee); }
+.student-wordmark { width: min(440px, 82%); height: auto; margin-bottom: 20px; object-fit: contain; }
+.exam-brand-logo { width: 94px; height: 38px; object-fit: contain; object-position: left center; }
 .art-content { z-index: 2; max-width: 440px; }
 .logo { width: 43px; height: 43px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #3268df, #704be2); font-weight: 850; font-size: 21px; }
 .logo.white { background: #fff; color: #3162ce; margin-bottom: 27px; }
