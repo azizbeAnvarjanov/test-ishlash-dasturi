@@ -9,6 +9,8 @@ Update repository'lari:
 - `azizbeAnvarjanov/test-server-updates`
 - `azizbeAnvarjanov/test-student-updates`
 
+Har bir update repository mutlaqo bo'sh bo'lmasligi kerak: unda kamida `main` branch va bitta boshlang'ich commit bo'lsin. Aks holda GitHub Release yaratishda `422 Unprocessable Entity` qaytaradi.
+
 GitHub fine-grained token yarating. Token faqat ikki update repository uchun **Contents: Read and write** ruxsatiga ega bo'lsin. Asosiy repository'da `Settings → Secrets and variables → Actions` bo'limiga kirib tokenni `UPDATES_TOKEN` nomi bilan saqlang.
 
 ## Birinchi versiya
@@ -36,4 +38,4 @@ GitHub fine-grained token yarating. Token faqat ikki update repository uchun **C
    git push origin v1.0.1
    ```
 
-Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi.
+Tag push qilinganda GitHub Actions Server va Student NSIS installerlarini quradi va tegishli update repository'ga `latest.yml`, `.exe` va `.blockmap` fayllarini Release sifatida joylaydi. Mavjud tag workflow qayta ishga tushirilsa electron-builder mavjud draft/release'ga fayllarni yuklashga urinadi; bir xil asset allaqachon mavjud bo'lsa update repository'dagi shu release'ni o'chirib qayta ishga tushirish yoki yangi patch versiya chiqarish kerak.

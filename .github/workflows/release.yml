@@ -29,6 +29,18 @@ jobs:
           $studentVersion = (Get-Content apps/student/package.json | ConvertFrom-Json).version
           if ("${{ github.ref_type }}" -eq "tag" -and $tagVersion -ne $serverVersion) { throw "Tag $tagVersion va Server $serverVersion mos emas" }
           if ($serverVersion -ne $studentVersion) { throw "Server va Student versiyalari bir xil bo'lishi kerak" }
+      - name: Verify update repositories
+        shell: pwsh
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          foreach ($repo in @("test-server-updates", "test-student-updates")) {
+            $info = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/azizbeAnvarjanov/$repo"
+            if (-not $info.default_branch) { throw "$repo repository bo'sh: avval main branch yarating" }
+          }
       - run: npm run typecheck
       - run: npm run release:server
       - run: npm run release:student
