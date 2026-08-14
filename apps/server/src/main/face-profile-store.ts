@@ -37,6 +37,9 @@ const parsePhoto = (dataUrl?: string): { extension: 'jpg' | 'png'; bytes: Buffer
 }
 
 export class FaceProfileStore {
+  private cachedIndexPath = ''
+  private cachedDatabase: FaceDatabaseFile | null = null
+
   constructor(private readonly getDirectoryPath: () => string) {}
 
   getDirectory(): string {
@@ -120,6 +123,7 @@ export class FaceProfileStore {
 
   private readDatabase(): FaceDatabaseFile {
     const indexPath = this.getIndexPath()
+    if (this.cachedDatabase && this.cachedIndexPath === indexPath) return this.cachedDatabase
     if (!indexPath || !fs.existsSync(indexPath)) return this.emptyDatabase()
     try {
       const raw = JSON.parse(fs.readFileSync(indexPath, 'utf8')) as Partial<FaceDatabaseFile>
@@ -137,12 +141,15 @@ export class FaceProfileStore {
           photoFile: item.photoFile ? path.basename(String(item.photoFile)) : undefined
         }]
       }) : []
-      return {
+      const database: FaceDatabaseFile = {
         format: 'test-ishlash-dasturi-face-id',
         version: 1,
         updatedAt: String(raw.updatedAt || new Date().toISOString()),
         profiles
       }
+      this.cachedIndexPath = indexPath
+      this.cachedDatabase = database
+      return database
     } catch {
       throw new Error(`Face ID baza fayli buzilgan: ${indexPath}`)
     }
@@ -215,6 +222,9 @@ export class FaceProfileStore {
     fs.writeFileSync(temporaryPath, JSON.stringify(database, null, 2), 'utf8')
     if (fs.existsSync(indexPath)) fs.rmSync(indexPath)
     fs.renameSync(temporaryPath, indexPath)
+
+    this.cachedIndexPath = indexPath
+    this.cachedDatabase = database
 
     const readmePath = path.join(directory, README_FILE_NAME)
     fs.writeFileSync(readmePath, [

@@ -8,9 +8,11 @@ const faceIdentityHuman = new Human({
   debug: false,
   face: {
     enabled: true,
-    detector: { rotation: true, return: false, maxDetected: 2, minConfidence: 0.2 },
-    mesh: { enabled: true, keepInvalid: true },
-    iris: { enabled: true },
+    detector: { rotation: false, return: false, maxDetected: 2, minConfidence: 0.2 },
+    // Face ID uchun embedding yetarli. Mesh va iris past quvvatli
+    // kompyuterlarda katta qo'shimcha yuk bo'lib, natijaga ta'sir qilmaydi.
+    mesh: { enabled: false },
+    iris: { enabled: false },
     emotion: { enabled: false },
     description: { enabled: true },
     antispoof: { enabled: false },
@@ -30,7 +32,7 @@ const proctorHuman = new Human({
   debug: false,
   face: {
     enabled: true,
-    detector: { rotation: true, return: false, maxDetected: 2, minConfidence: 0.35 },
+    detector: { rotation: false, return: false, maxDetected: 2, minConfidence: 0.35 },
     mesh: { enabled: false },
     iris: { enabled: false },
     emotion: { enabled: false },
@@ -46,6 +48,23 @@ const proctorHuman = new Human({
 
 let readyPromise: Promise<void> | null = null
 let proctorReadyPromise: Promise<void> | null = null
+const inferenceCanvas = document.createElement('canvas')
+
+const scaledVideoFrame = (video: HTMLVideoElement, maxWidth: number): HTMLCanvasElement => {
+  const sourceWidth = video.videoWidth || 640
+  const sourceHeight = video.videoHeight || 480
+  const scale = Math.min(1, maxWidth / sourceWidth)
+  inferenceCanvas.width = Math.max(1, Math.round(sourceWidth * scale))
+  inferenceCanvas.height = Math.max(1, Math.round(sourceHeight * scale))
+  const context = inferenceCanvas.getContext('2d', { alpha: false })
+  if (!context) throw new Error('Kamera kadrini tayyorlab bo\u2018lmadi')
+  context.drawImage(video, 0, 0, inferenceCanvas.width, inferenceCanvas.height)
+  return inferenceCanvas
+}
+
+const yieldToUi = (): Promise<void> => new Promise((resolve) => {
+  requestAnimationFrame(() => window.setTimeout(resolve, 0))
+})
 
 export type ProctorFaceCheck = {
   ok: boolean
@@ -85,7 +104,9 @@ export const extractFaceDescriptor = async (
   input: HTMLVideoElement | HTMLImageElement
 ): Promise<number[]> => {
   await prepareFaceEngine()
-  const result = await faceIdentityHuman.detect(input)
+  await yieldToUi()
+  const detectionInput = input instanceof HTMLVideoElement ? scaledVideoFrame(input, 480) : input
+  const result = await faceIdentityHuman.detect(detectionInput)
   if (result.face.length === 0) throw new Error('Kamerada yuz topilmadi. Kameraga to‘g‘ri qarang.')
   if (result.face.length > 1) throw new Error('Kamerada faqat bitta odam bo‘lishi kerak.')
   const face = result.face[0]
@@ -154,7 +175,7 @@ const getLandmarkTurnRatio = (face: FaceResult): number | undefined => {
 
 export const detectProctorFace = async (input: HTMLVideoElement): Promise<ProctorFaceCheck> => {
   await prepareProctorEngine()
-  const result = await proctorHuman.detect(input)
+  const result = await proctorHuman.detect(scaledVideoFrame(input, 320))
   const faceCount = result.face.length
 
   if (faceCount === 0) {
@@ -229,10 +250,13 @@ export const detectProctorFace = async (input: HTMLVideoElement): Promise<Procto
 
 export const captureVideoPhoto = (video: HTMLVideoElement): string => {
   const canvas = document.createElement('canvas')
-  canvas.width = video.videoWidth
-  canvas.height = video.videoHeight
+  const sourceWidth = video.videoWidth || 640
+  const sourceHeight = video.videoHeight || 480
+  const scale = Math.min(1, 640 / sourceWidth)
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale))
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale))
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Kamera rasmini olishda xato')
   context.drawImage(video, 0, 0, canvas.width, canvas.height)
-  return canvas.toDataURL('image/jpeg', 0.82)
+  return canvas.toDataURL('image/jpeg', 0.72)
 }

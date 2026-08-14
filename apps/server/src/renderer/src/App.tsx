@@ -124,8 +124,13 @@ function App(): React.JSX.Element {
     const removeListener = window.serverDesktop.onResultsSaved((filePath) => setResultsFilePath(filePath))
     void refresh()
     const timer = window.setInterval(() => {
-      // Katta ro‘yxatlarni qayta render qilish test editoridagi aktiv inputni qotirmasin.
-      if (!editingRef.current) void refresh()
+      const activeElement = document.activeElement
+      const isTyping = activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement
+      // Modal yoki aktiv input paytida katta ro'yxat va base64 rasmlarni qayta
+      // render qilish yozishni uzmasin. Amal tugagach explicit refresh ishlaydi.
+      if (!editingRef.current && !isTyping && !document.querySelector('.modal-backdrop')) void refresh()
     }, 1500)
     return () => {
       window.clearInterval(timer)

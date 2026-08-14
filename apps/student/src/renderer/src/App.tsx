@@ -21,7 +21,8 @@ type ProctorWarning = { count: number; message: string; final: boolean }
 type CameraDevice = { deviceId: string; label: string }
 
 const PROCTOR_MAX_WARNINGS = 3
-const PROCTOR_CHECK_INTERVAL_MS = 500
+// Inferensiyalar orasida CPU/GPU va React UI uchun bo'sh vaqt qoldiramiz.
+const PROCTOR_CHECK_INTERVAL_MS = 1200
 const PROCTOR_VIOLATION_GRACE_MS = 2000
 const PROCTOR_WARNING_COOLDOWN_MS = 3500
 const PROCTOR_MODAL_AUTO_CLOSE_MS = 2000
@@ -731,7 +732,7 @@ function FaceIdentityScreen(props: {
     void (async () => {
       try {
         await prepareFaceEngine()
-        const stream = await openCameraStream(props.cameraDeviceId, 960, 720)
+        const stream = await openCameraStream(props.cameraDeviceId, 640, 480)
         if (!active) {
           stream.getTracks().forEach((track) => track.stop())
           return
