@@ -183,9 +183,9 @@ app.whenReady().then(() => {
     setExamMode(Boolean(enabled))
   })
 
-  ipcMain.handle('student:save-draft', (_event, exam: ExamSession, submission: StudentSubmission) => {
+  ipcMain.handle('student:save-draft', async (_event, exam: ExamSession, submission: StudentSubmission) => {
     const file = path.join(resultsDirectory, `.draft-${submission.deviceId}.json`)
-    fs.writeFileSync(file, JSON.stringify({ exam, submission, savedAt: new Date().toISOString() }, null, 2), 'utf8')
+    await fs.promises.writeFile(file, JSON.stringify({ exam, submission, savedAt: new Date().toISOString() }, null, 2), 'utf8')
     return file
   })
 

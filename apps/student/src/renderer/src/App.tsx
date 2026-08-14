@@ -22,8 +22,9 @@ type CameraDevice = { deviceId: string; label: string }
 
 const PROCTOR_MAX_WARNINGS = 3
 // Inferensiyalar orasida CPU/GPU va React UI uchun bo'sh vaqt qoldiramiz.
-const PROCTOR_CHECK_INTERVAL_MS = 1200
-const PROCTOR_VIOLATION_GRACE_MS = 2000
+const PROCTOR_CHECK_INTERVAL_MS = 1000
+const PROCTOR_VIOLATION_GRACE_MS = 3000
+const PROCTOR_MAX_RESULT_AGE_MS = 2500
 const PROCTOR_WARNING_COOLDOWN_MS = 3500
 const PROCTOR_MODAL_AUTO_CLOSE_MS = 2000
 const CAMERA_DEVICE_STORAGE_KEY = 'student-camera-device-id'
@@ -159,6 +160,7 @@ function App(): React.JSX.Element {
   const examRef = useRef<ExamSession | null>(null)
   const answersRef = useRef<Record<string, number>>({})
   const submitExamRef = useRef<(() => Promise<void>) | null>(null)
+  const examSyncTimerRef = useRef<number | null>(null)
 
   const saveSelectedCameraId = useCallback((nextCameraId: string): void => {
     setSelectedCameraId(nextCameraId)
@@ -314,6 +316,7 @@ function App(): React.JSX.Element {
         body: JSON.stringify({ student: identityRef.current })
       })
       submittingRef.current = false
+      if (examSyncTimerRef.current) window.clearTimeout(examSyncTimerRef.current)
       examRef.current = startedExam
       answersRef.current = {}
       setExam(startedExam)
@@ -356,6 +359,10 @@ function App(): React.JSX.Element {
     const currentExam = examRef.current
     if (!currentExam || submittingRef.current || !identityRef.current) return
     submittingRef.current = true
+    if (examSyncTimerRef.current) {
+      window.clearTimeout(examSyncTimerRef.current)
+      examSyncTimerRef.current = null
+    }
     const submission = buildSubmission(currentExam, answersRef.current)
     let file = ''
     let sent = false
@@ -425,19 +432,28 @@ function App(): React.JSX.Element {
     }).catch(() => undefined)
   }, [])
 
+  const scheduleExamSync = useCallback((nextQuestion: number): void => {
+    if (examSyncTimerRef.current) window.clearTimeout(examSyncTimerRef.current)
+    examSyncTimerRef.current = window.setTimeout(() => {
+      examSyncTimerRef.current = null
+      const currentExam = examRef.current
+      if (!currentExam) return
+      const currentAnswers = answersRef.current
+      void window.studentDesktop.saveDraft(currentExam, buildSubmission(currentExam, currentAnswers))
+      sendProgress(currentAnswers, nextQuestion)
+    }, 350)
+  }, [buildSubmission, sendProgress])
+
   const chooseAnswer = (questionId: string, optionIndex: number): void => {
     const nextAnswers = { ...answersRef.current, [questionId]: optionIndex }
     answersRef.current = nextAnswers
     setAnswers(nextAnswers)
-    if (examRef.current) {
-      void window.studentDesktop.saveDraft(examRef.current, buildSubmission(examRef.current, nextAnswers))
-      sendProgress(nextAnswers, questionIndex)
-    }
+    if (examRef.current) scheduleExamSync(questionIndex)
   }
 
   const changeQuestion = (index: number): void => {
     setQuestionIndex(index)
-    sendProgress(answersRef.current, index)
+    scheduleExamSync(index)
   }
 
   const manualSubmit = (): void => {
@@ -1038,6 +1054,8 @@ function ProctorCamera(props: {
   const activeRef = useRef(false)
   const detectingRef = useRef(false)
   const violationStartedAtRef = useRef<number | null>(null)
+  const consecutiveViolationsRef = useRef(0)
+  const warningConfirmationRef = useRef(false)
   const cooldownUntilRef = useRef(0)
   const finalizingRef = useRef(false)
   const warningCountRef = useRef(0)
@@ -1065,6 +1083,8 @@ function ProctorCamera(props: {
     warningCountRef.current = nextCount
     setWarningCount(nextCount)
     violationStartedAtRef.current = null
+    consecutiveViolationsRef.current = 0
+    warningConfirmationRef.current = false
     cooldownUntilRef.current = Date.now() + PROCTOR_WARNING_COOLDOWN_MS
     clearModalTimer()
 
@@ -1095,12 +1115,26 @@ function ProctorCamera(props: {
     if (!videoRef.current || detectingRef.current || finalizingRef.current) return
 
     detectingRef.current = true
+    const capturedAt = Date.now()
     try {
       const check = await detectProctorFace(videoRef.current)
       if (!activeRef.current) return
 
+      // Juda sekin kompyuterda kech qaytgan eski kadr foydalanuvchining hozirgi
+      // holati sifatida baholanmaydi va ogohlantirishga qo'shilmaydi.
+      if (Date.now() - capturedAt > PROCTOR_MAX_RESULT_AGE_MS) {
+        setStatus('loading')
+        setStatusText('Kamera holati yangilanmoqda...')
+        violationStartedAtRef.current = null
+        consecutiveViolationsRef.current = 0
+        warningConfirmationRef.current = false
+        return
+      }
+
       if (check.ok) {
         violationStartedAtRef.current = null
+        consecutiveViolationsRef.current = 0
+        warningConfirmationRef.current = false
         setStatus('ok')
         setStatusText('Yuz va nigoh to‘g‘ri. Nazorat faol.')
         return
@@ -1114,13 +1148,19 @@ function ProctorCamera(props: {
         return
       }
 
+      consecutiveViolationsRef.current += 1
       if (!violationStartedAtRef.current) violationStartedAtRef.current = now
       const elapsed = now - violationStartedAtRef.current
       const remaining = Math.max(0, Math.ceil((PROCTOR_VIOLATION_GRACE_MS - elapsed) / 1000))
       setStatusText(remaining > 0 ? `${check.message} ${remaining} soniya ichida tuzating.` : check.message)
 
-      if (elapsed >= PROCTOR_VIOLATION_GRACE_MS) {
-        showWarning(check.message)
+      if (elapsed >= PROCTOR_VIOLATION_GRACE_MS && consecutiveViolationsRef.current >= 3) {
+        if (!warningConfirmationRef.current) {
+          warningConfirmationRef.current = true
+          setStatusText('Holat yana bir marta tekshirilmoqda...')
+        } else {
+          showWarning(check.message)
+        }
       }
     } catch (reason) {
       if (!activeRef.current) return

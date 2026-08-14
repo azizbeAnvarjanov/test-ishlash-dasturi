@@ -1,56 +1,26 @@
-import { Human, type FaceResult, type Point } from '@vladmandic/human'
+type FaceWorkerTask = 'prepare-identity' | 'prepare-proctor' | 'identity' | 'proctor'
+type FaceWorkerResult = {
+  faceCount: number
+  embedding?: number[]
+  boxScore?: number
+  confidence?: number
+  yaw?: number
+  pitch?: number
+  roll?: number
+  gazeStrength?: number
+  landmarkTurnRatio?: number
+}
 
-const faceIdentityHuman = new Human({
-  backend: 'webgl',
-  modelBasePath: './models',
-  cacheSensitivity: 0,
-  warmup: 'none',
-  debug: false,
-  face: {
-    enabled: true,
-    detector: { rotation: false, return: false, maxDetected: 2, minConfidence: 0.2 },
-    // Face ID uchun embedding yetarli. Mesh va iris past quvvatli
-    // kompyuterlarda katta qo'shimcha yuk bo'lib, natijaga ta'sir qilmaydi.
-    mesh: { enabled: false },
-    iris: { enabled: false },
-    emotion: { enabled: false },
-    description: { enabled: true },
-    antispoof: { enabled: false },
-    liveness: { enabled: false }
-  },
-  body: { enabled: false },
-  hand: { enabled: false },
-  object: { enabled: false },
-  gesture: { enabled: false }
-})
-
-const proctorHuman = new Human({
-  backend: 'webgl',
-  modelBasePath: './models',
-  cacheSensitivity: 0,
-  warmup: 'none',
-  debug: false,
-  face: {
-    enabled: true,
-    detector: { rotation: false, return: false, maxDetected: 2, minConfidence: 0.35 },
-    mesh: { enabled: false },
-    iris: { enabled: false },
-    emotion: { enabled: false },
-    description: { enabled: false },
-    antispoof: { enabled: false },
-    liveness: { enabled: false }
-  },
-  body: { enabled: false },
-  hand: { enabled: false },
-  object: { enabled: false },
-  gesture: { enabled: false }
-})
-
-let readyPromise: Promise<void> | null = null
-let proctorReadyPromise: Promise<void> | null = null
+let faceWorker: Worker | null = null
+let taskId = 0
+const pendingTasks = new Map<number, {
+  resolve: (result: FaceWorkerResult | undefined) => void
+  reject: (reason: Error) => void
+}>()
 const inferenceCanvas = document.createElement('canvas')
+const modelBasePath = new URL('./models/', window.location.href).href
 
-const scaledVideoFrame = (video: HTMLVideoElement, maxWidth: number): HTMLCanvasElement => {
+const captureVideoFrame = (video: HTMLVideoElement, maxWidth: number): ImageData => {
   const sourceWidth = video.videoWidth || 640
   const sourceHeight = video.videoHeight || 480
   const scale = Math.min(1, maxWidth / sourceWidth)
@@ -59,12 +29,54 @@ const scaledVideoFrame = (video: HTMLVideoElement, maxWidth: number): HTMLCanvas
   const context = inferenceCanvas.getContext('2d', { alpha: false })
   if (!context) throw new Error('Kamera kadrini tayyorlab bo\u2018lmadi')
   context.drawImage(video, 0, 0, inferenceCanvas.width, inferenceCanvas.height)
-  return inferenceCanvas
+  return context.getImageData(0, 0, inferenceCanvas.width, inferenceCanvas.height)
 }
 
-const yieldToUi = (): Promise<void> => new Promise((resolve) => {
-  requestAnimationFrame(() => window.setTimeout(resolve, 0))
-})
+const getFaceWorker = (): Worker => {
+  if (faceWorker) return faceWorker
+  faceWorker = new Worker(new URL('./face-worker.ts', import.meta.url), { type: 'module' })
+  faceWorker.onmessage = (event: MessageEvent<{
+    id: number
+    ok: boolean
+    result?: FaceWorkerResult
+    error?: string
+  }>) => {
+    const pending = pendingTasks.get(event.data.id)
+    if (!pending) return
+    pendingTasks.delete(event.data.id)
+    if (event.data.ok) pending.resolve(event.data.result)
+    else pending.reject(new Error(event.data.error || 'Yuz modelida xato'))
+  }
+  faceWorker.onerror = () => {
+    for (const pending of pendingTasks.values()) pending.reject(new Error('Yuz modeli ishga tushmadi'))
+    pendingTasks.clear()
+    faceWorker?.terminate()
+    faceWorker = null
+  }
+  return faceWorker
+}
+
+const runFaceTask = (task: FaceWorkerTask, image?: ImageData): Promise<FaceWorkerResult | undefined> => {
+  const id = ++taskId
+  return new Promise((resolve, reject) => {
+    pendingTasks.set(id, { resolve, reject })
+    if (image) {
+      getFaceWorker().postMessage({
+        id,
+        task,
+        modelBasePath,
+        image: image.data.buffer,
+        width: image.width,
+        height: image.height
+      }, [image.data.buffer])
+    } else {
+      getFaceWorker().postMessage({ id, task, modelBasePath })
+    }
+  })
+}
+
+let readyPromise: Promise<void> | null = null
+let proctorReadyPromise: Promise<void> | null = null
 
 export type ProctorFaceCheck = {
   ok: boolean
@@ -82,20 +94,20 @@ export type ProctorFaceCheck = {
 
 export const prepareFaceEngine = (): Promise<void> => {
   if (!readyPromise) {
-    readyPromise = (async () => {
-      await faceIdentityHuman.load()
-      await faceIdentityHuman.warmup()
-    })()
+    readyPromise = runFaceTask('prepare-identity').then(() => undefined).catch((reason) => {
+      readyPromise = null
+      throw reason
+    })
   }
   return readyPromise
 }
 
 export const prepareProctorEngine = (): Promise<void> => {
   if (!proctorReadyPromise) {
-    proctorReadyPromise = (async () => {
-      await proctorHuman.load()
-      await proctorHuman.warmup()
-    })()
+    proctorReadyPromise = runFaceTask('prepare-proctor').then(() => undefined).catch((reason) => {
+      proctorReadyPromise = null
+      throw reason
+    })
   }
   return proctorReadyPromise
 }
@@ -103,80 +115,33 @@ export const prepareProctorEngine = (): Promise<void> => {
 export const extractFaceDescriptor = async (
   input: HTMLVideoElement | HTMLImageElement
 ): Promise<number[]> => {
+  if (!(input instanceof HTMLVideoElement)) throw new Error('Yuzni kamera orqali skanerlang')
   await prepareFaceEngine()
-  await yieldToUi()
-  const detectionInput = input instanceof HTMLVideoElement ? scaledVideoFrame(input, 480) : input
-  const result = await faceIdentityHuman.detect(detectionInput)
-  if (result.face.length === 0) throw new Error('Kamerada yuz topilmadi. Kameraga to‘g‘ri qarang.')
-  if (result.face.length > 1) throw new Error('Kamerada faqat bitta odam bo‘lishi kerak.')
-  const face = result.face[0]
-  if (!face.embedding || face.embedding.length < 64) {
+  const result = await runFaceTask('identity', captureVideoFrame(input, 384))
+  if (!result || result.faceCount === 0) throw new Error('Kamerada yuz topilmadi. Kameraga to‘g‘ri qarang.')
+  if (result.faceCount > 1) throw new Error('Kamerada faqat bitta odam bo‘lishi kerak.')
+  if (!result.embedding || result.embedding.length < 64) {
     throw new Error('Yuz shablonini yaratib bo‘lmadi. Kameraga to‘g‘ri qarab qayta urinib ko‘ring.')
   }
-  if (Number.isFinite(face.boxScore) && face.boxScore < 0.3) {
+  if (Number.isFinite(result.boxScore) && result.boxScore! < 0.3) {
     throw new Error('Yuz kamerada juda kichik ko‘rindi. Kameraga biroz yaqinroq turing.')
   }
-  return face.embedding.map((value) => Number(value.toFixed(6)))
+  return result.embedding.map((value) => Number(value.toFixed(6)))
 }
 
 const radiansToDegrees = (value: number): number => Math.abs(Math.round((value * 180) / Math.PI))
 // Oddiy tabiiy harakatlar ogohlantirish bermaydi, aniq yon tomonga qarash esa aniqlanadi.
-const PROCTOR_YAW_LIMIT_DEGREES = 15
-const PROCTOR_PITCH_LIMIT_DEGREES = 18
-const PROCTOR_ROLL_LIMIT_DEGREES = 22
-const PROCTOR_GAZE_STRENGTH_LIMIT = 0.075
-const PROCTOR_LANDMARK_TURN_LIMIT = 0.16
-
-type SimplePoint = { x: number; y: number }
-
-const averageAnnotationPoint = (points: Point[] | undefined): SimplePoint | null => {
-  if (!points?.length) return null
-  return {
-    x: points.reduce((sum, point) => sum + point[0], 0) / points.length,
-    y: points.reduce((sum, point) => sum + point[1], 0) / points.length
-  }
-}
-
-const annotationPoint = (face: FaceResult, names: string[]): SimplePoint | null => {
-  const annotations = face.annotations as Record<string, Point[] | undefined>
-  for (const name of names) {
-    const point = averageAnnotationPoint(annotations[name])
-    if (point) return point
-  }
-  return null
-}
-
-const pointDistance = (first: SimplePoint, second: SimplePoint): number =>
-  Math.hypot(first.x - second.x, first.y - second.y)
-
-// Yuz to'liq yonga burilganda ayrim qurilmalarda 3D yaw nolga yaqin chiqadi.
-// Burunning ikki ko'z va ikki yonoqqa masofa nosimmetriyasi buni mustaqil ushlaydi.
-const getLandmarkTurnRatio = (face: FaceResult): number | undefined => {
-  const leftEye = annotationPoint(face, ['leftEye'])
-  const rightEye = annotationPoint(face, ['rightEye'])
-  const nose = annotationPoint(face, ['noseTip', 'nose', 'noseBottom'])
-  if (!leftEye || !rightEye || !nose) return undefined
-
-  const leftEyeDistance = pointDistance(nose, leftEye)
-  const rightEyeDistance = pointDistance(nose, rightEye)
-  const eyeAsymmetry = Math.abs(leftEyeDistance - rightEyeDistance) /
-    Math.max(0.0001, leftEyeDistance + rightEyeDistance)
-
-  const leftCheek = annotationPoint(face, ['leftCheek', 'leftEar'])
-  const rightCheek = annotationPoint(face, ['rightCheek', 'rightEar'])
-  if (!leftCheek || !rightCheek) return eyeAsymmetry
-
-  const leftCheekDistance = pointDistance(nose, leftCheek)
-  const rightCheekDistance = pointDistance(nose, rightCheek)
-  const cheekAsymmetry = Math.abs(leftCheekDistance - rightCheekDistance) /
-    Math.max(0.0001, leftCheekDistance + rightCheekDistance)
-  return Math.max(eyeAsymmetry, cheekAsymmetry)
-}
+const PROCTOR_YAW_LIMIT_DEGREES = 22
+const PROCTOR_PITCH_LIMIT_DEGREES = 24
+const PROCTOR_ROLL_LIMIT_DEGREES = 28
+const PROCTOR_GAZE_STRENGTH_LIMIT = 0.12
+const PROCTOR_LANDMARK_TURN_LIMIT = 0.22
 
 export const detectProctorFace = async (input: HTMLVideoElement): Promise<ProctorFaceCheck> => {
   await prepareProctorEngine()
-  const result = await proctorHuman.detect(scaledVideoFrame(input, 320))
-  const faceCount = result.face.length
+  const result = await runFaceTask('proctor', captureVideoFrame(input, 256))
+  if (!result) throw new Error('Yuz nazorati natijasi olinmadi')
+  const faceCount = result.faceCount
 
   if (faceCount === 0) {
     return {
@@ -196,8 +161,7 @@ export const detectProctorFace = async (input: HTMLVideoElement): Promise<Procto
     }
   }
 
-  const face = result.face[0]
-  const confidence = face.faceScore || face.boxScore || face.score || 0
+  const confidence = result.confidence || 0
   if (confidence < 0.28) {
     return {
       ok: false,
@@ -207,12 +171,11 @@ export const detectProctorFace = async (input: HTMLVideoElement): Promise<Procto
     }
   }
 
-  const rotation = face.rotation?.angle
-  const gazeStrength = face.rotation?.gaze.strength
-  const yawDegrees = rotation ? radiansToDegrees(rotation.yaw) : undefined
-  const pitchDegrees = rotation ? radiansToDegrees(rotation.pitch) : undefined
-  const rollDegrees = rotation ? radiansToDegrees(rotation.roll) : undefined
-  const landmarkTurnRatio = getLandmarkTurnRatio(face)
+  const gazeStrength = result.gazeStrength
+  const yawDegrees = result.yaw !== undefined ? radiansToDegrees(result.yaw) : undefined
+  const pitchDegrees = result.pitch !== undefined ? radiansToDegrees(result.pitch) : undefined
+  const rollDegrees = result.roll !== undefined ? radiansToDegrees(result.roll) : undefined
+  const landmarkTurnRatio = result.landmarkTurnRatio
   const turnedAway =
     (yawDegrees !== undefined && yawDegrees > PROCTOR_YAW_LIMIT_DEGREES) ||
     (pitchDegrees !== undefined && pitchDegrees > PROCTOR_PITCH_LIMIT_DEGREES) ||
