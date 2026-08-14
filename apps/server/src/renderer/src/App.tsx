@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
+  type AppUpdateState,
   type ConnectedStudent,
   type FaceEnrollmentRequest,
   type PublishedTest,
@@ -15,6 +16,12 @@ import { extractFaceFromDataUrl, prepareFaceEngine } from './face-engine'
 
 const API = 'http://127.0.0.1:4780/api'
 type Tab = 'monitor' | 'tests' | 'results' | 'settings'
+
+const formatBytes = (bytes = 0): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+}
 
 const parseRosterText = (value: string): Array<{ fish: string; group: string }> =>
   value
@@ -130,7 +137,7 @@ function App(): React.JSX.Element {
         activeElement instanceof HTMLSelectElement
       // Modal yoki aktiv input paytida katta ro'yxat va base64 rasmlarni qayta
       // render qilish yozishni uzmasin. Amal tugagach explicit refresh ishlaydi.
-      if (!editingRef.current && !isTyping && !document.querySelector('.modal-backdrop')) void refresh()
+      if (!editingRef.current && !isTyping && !document.querySelector('.modal-backdrop') && !document.querySelector('.page-editor')) void refresh()
     }, 1500)
     return () => {
       window.clearInterval(timer)
@@ -235,10 +242,10 @@ function App(): React.JSX.Element {
       <header className="server-header">
         <div className="server-brand"><img className="brand-logo" src="/branding/logo.png" alt="Easy Testing Server" /><div><strong>Easy Testing Server</strong><span>O‘qituvchi boshqaruv paneli</span></div></div>
         <nav className="top-tabs">
-          <TabButton active={tab === 'monitor'} label="Monitor" count={working.length + faceEnrollmentRequests.length} onClick={() => setTab('monitor')} />
-          <TabButton active={tab === 'tests'} label="Testlar" count={tests.length} onClick={() => setTab('tests')} />
-          <TabButton active={tab === 'results'} label="Natijalar" count={results.length} onClick={() => setTab('results')} />
-          <TabButton active={tab === 'settings'} label="Sozlamalar" onClick={() => setTab('settings')} />
+          <TabButton active={tab === 'monitor'} label="Monitor" count={working.length + faceEnrollmentRequests.length} onClick={() => { setEditing(null); setTab('monitor') }} />
+          <TabButton active={tab === 'tests'} label="Testlar" count={tests.length} onClick={() => { setEditing(null); setTab('tests') }} />
+          <TabButton active={tab === 'results'} label="Natijalar" count={results.length} onClick={() => { setEditing(null); setTab('results') }} />
+          <TabButton active={tab === 'settings'} label="Sozlamalar" onClick={() => { setEditing(null); setTab('settings') }} />
         </nav>
         <div className="server-online"><span /><div><small>Server IP (LAN)</small><strong>{serverAddress}</strong></div></div>
       </header>
@@ -250,7 +257,7 @@ function App(): React.JSX.Element {
             <h1>{tab === 'monitor' ? 'Monitor' : tab === 'tests' ? 'Testlar' : tab === 'results' ? 'Natijalar' : 'Sozlamalar'}</h1>
             <p>{tab === 'monitor' ? 'Hozir test ishlayotgan studentlarni real vaqtda kuzating.' : tab === 'tests' ? 'Test yarating yoki Excel shabloni orqali yuklang.' : tab === 'results' ? 'Joriy server sessiyasi yoki oldingi saqlangan fayl natijalarini ko‘ring.' : 'Studentni aniqlash usuli va server ro‘yxatini boshqaring.'}</p>
           </div>
-          {tab === 'tests' && (
+          {tab === 'tests' && !editing && (
             <div className="page-actions">
               <button className="secondary" onClick={() => void downloadTestTemplate()}>Excel shabloni</button>
               <button className="secondary" onClick={() => void importTest()}>Exceldan yuklash</button>
@@ -279,7 +286,8 @@ function App(): React.JSX.Element {
             onChanged={async (text) => { await refresh(); notify(text) }}
           />
         )}
-        {tab === 'tests' && <Tests tests={tests} published={published} testsDataPath={testsDataPath} onOpenFolder={openTestsFolder} onEdit={setEditing} onDelete={deleteTest} onTogglePublish={togglePublish} />}
+        {tab === 'tests' && !editing && <Tests tests={tests} published={published} testsDataPath={testsDataPath} onOpenFolder={openTestsFolder} onEdit={setEditing} onDelete={deleteTest} onTogglePublish={togglePublish} />}
+        {tab === 'tests' && editing && <TestEditor initial={editing} onClose={() => setEditing(null)} onSave={saveTest} />}
         {tab === 'results' && (
           <>
             {openedResults ? (
@@ -302,7 +310,6 @@ function App(): React.JSX.Element {
         {tab === 'settings' && <Settings settings={settings} roster={roster} faceProfileCount={faceProfileCount} faceDataPath={faceDataPath} onFaceDataPathChanged={setFaceDataPath} onSaved={async () => { await refresh(); notify('Sozlamalar saqlandi') }} />}
       </main>
 
-      {editing && <TestEditor initial={editing} onClose={() => setEditing(null)} onSave={saveTest} />}
     </div>
   )
 }
@@ -384,6 +391,33 @@ function Monitor(props: {
       setError(reason instanceof Error ? reason.message : 'Skanerlashni boshlashda xato')
     }
   }
+
+  if (selectedRequest?.status === 'scanned' && selectedRequest.photoDataUrl) {
+    return (
+      <section className="panel page-editor face-enrollment-page">
+        <div className="modal-header">
+          <div><h2>Yangi studentni Face ID bazasiga qo‘shish</h2><p>{selectedRequest.computerName} kompyuterida olingan yuz</p></div>
+          <button className="secondary" onClick={closeEnrollment}>← Monitor’ga qaytish</button>
+        </div>
+        <div className="editor-body face-request-editor">
+          <img src={selectedRequest.photoDataUrl} alt="Student yuzi" />
+          <div>
+            {error && <div className="alert error">{error}</div>}
+            <div className="form-grid face-request-form">
+              <label><span>Ism</span><input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Ali" autoFocus /></label>
+              <label><span>Familiya</span><input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Aliyev" /></label>
+              <label><span>Guruh</span><input value={group} onChange={(event) => setGroup(event.target.value)} placeholder="101-guruh" /></label>
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="secondary" disabled={saving} onClick={() => void rejectEnrollment(selectedRequest)}>Rad etish</button>
+          <button className="primary" disabled={saving} onClick={() => void approveEnrollment()}>{saving ? 'Saqlanmoqda...' : 'Tasdiqlash va qo‘shish'}</button>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <>
       <section className="metric-grid">
@@ -443,31 +477,6 @@ function Monitor(props: {
         </div>
         {!props.students.length && <div className="empty-state">Hozircha serverga student ulanmagan.</div>}
       </section>
-      {selectedRequest?.status === 'scanned' && selectedRequest.photoDataUrl && (
-        <div className="modal-backdrop">
-          <div className="modal face-registration-modal">
-            <div className="modal-header">
-              <div><h2>Yangi studentni Face ID bazasiga qo‘shish</h2><p>{selectedRequest.computerName} kompyuterida olingan yuz</p></div>
-              <button className="close" onClick={closeEnrollment}>×</button>
-            </div>
-            <div className="editor-body face-request-editor">
-              <img src={selectedRequest.photoDataUrl} alt="Student yuzi" />
-              <div>
-                {error && <div className="alert error">{error}</div>}
-                <div className="form-grid face-request-form">
-                  <label><span>Ism</span><input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Ali" autoFocus /></label>
-                  <label><span>Familiya</span><input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Aliyev" /></label>
-                  <label><span>Guruh</span><input value={group} onChange={(event) => setGroup(event.target.value)} placeholder="101-guruh" /></label>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="secondary" disabled={saving} onClick={() => void rejectEnrollment(selectedRequest)}>Rad etish</button>
-              <button className="primary" disabled={saving} onClick={() => void approveEnrollment()}>{saving ? 'Saqlanmoqda...' : 'Tasdiqlash va qo‘shish'}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
@@ -586,8 +595,11 @@ function Settings(props: {
   const [error, setError] = useState('')
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const [registering, setRegistering] = useState(false)
-  const [updateChecking, setUpdateChecking] = useState(false)
-  const [updateMessage, setUpdateMessage] = useState('Tugmani bosib yangi versiya borligini tekshiring.')
+  const [updateState, setUpdateState] = useState<AppUpdateState>({
+    status: 'idle',
+    message: 'Tugmani bosib yangi versiya borligini tekshiring.',
+    currentVersion: ''
+  })
   const [registration, setRegistration] = useState({
     firstName: '',
     lastName: '',
@@ -595,6 +607,11 @@ function Settings(props: {
     photoDataUrl: '',
     photoName: ''
   })
+
+  useEffect(() => {
+    void window.serverDesktop.getUpdateState().then(setUpdateState)
+    return window.serverDesktop.onUpdateStatus(setUpdateState)
+  }, [])
 
   const downloadTemplate = async (): Promise<void> => {
     await window.serverDesktop.downloadRosterTemplate()
@@ -812,16 +829,41 @@ function Settings(props: {
   }
 
   const checkForUpdates = async (): Promise<void> => {
-    setUpdateChecking(true)
-    setUpdateMessage('GitHub orqali yangilanish tekshirilmoqda...')
     try {
-      const result = await window.serverDesktop.checkForUpdates()
-      setUpdateMessage(result.message)
+      setUpdateState(await window.serverDesktop.checkForUpdates())
     } catch (reason) {
-      setUpdateMessage(reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.')
-    } finally {
-      setUpdateChecking(false)
+      setUpdateState((current) => ({ ...current, status: 'error', message: reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.' }))
     }
+  }
+
+  const downloadUpdate = async (): Promise<void> => setUpdateState(await window.serverDesktop.downloadUpdate())
+  const installUpdate = async (): Promise<void> => setUpdateState(await window.serverDesktop.installUpdate())
+
+  if (registrationOpen) {
+    return (
+      <section className="panel page-editor face-registration-page">
+        <div className="modal-header">
+          <div><h2>Face ID registratsiya</h2><p>Student ma’lumotlari va yuz rasmini kiriting.</p></div>
+          <button className="secondary" onClick={() => setRegistrationOpen(false)}>← Sozlamalarga qaytish</button>
+        </div>
+        <div className="editor-body">
+          {error && <div className="alert error">{error}</div>}
+          <div className="form-grid registration-form-grid">
+            <label><span>Ism</span><input value={registration.firstName} onChange={(event) => setRegistration({ ...registration, firstName: event.target.value })} placeholder="Ali" autoFocus /></label>
+            <label><span>Familiya</span><input value={registration.lastName} onChange={(event) => setRegistration({ ...registration, lastName: event.target.value })} placeholder="Aliyev" /></label>
+            <label><span>Guruh</span><input value={registration.group} onChange={(event) => setRegistration({ ...registration, group: event.target.value })} placeholder="101-guruh" /></label>
+          </div>
+          <button className={registration.photoDataUrl ? 'photo-picker selected' : 'photo-picker'} onClick={() => void pickRegistrationPhoto()}>
+            <span>{registration.photoDataUrl ? '✓' : '＋'}</span>
+            <div><strong>{registration.photoName || 'Yuz rasmini tanlash'}</strong><small>JPG, JPEG yoki PNG · rasmda bitta yuz bo‘lsin</small></div>
+          </button>
+        </div>
+        <div className="modal-footer">
+          <button className="secondary" onClick={() => setRegistrationOpen(false)}>Bekor qilish</button>
+          <button className="primary" disabled={registering} onClick={() => void registerFace()}>{registering ? 'Yuz tekshirilmoqda...' : 'Registratsiya qilish'}</button>
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -841,7 +883,28 @@ function Settings(props: {
       </section>
       <section className="panel update-panel">
         <div className="panel-title"><div><h2>Dastur yangilanishi</h2><p>Easy Testing Server yangi versiyasini tekshiring va yuklab oling</p></div><span className="update-icon">↻</span></div>
-        <div className="update-content"><div><strong>GitHub avtomatik yangilanishi</strong><small>{updateMessage}</small></div><button className="primary" disabled={updateChecking} onClick={() => void checkForUpdates()}>{updateChecking ? 'Tekshirilmoqda...' : 'Yangilanishni tekshirish'}</button></div>
+        <div className="update-content update-content-detailed">
+          <div><strong>GitHub avtomatik yangilanishi</strong><small>{updateState.message}</small></div>
+          {updateState.status === 'available' ? (
+            <button className="primary" onClick={() => void downloadUpdate()}>Yuklash</button>
+          ) : updateState.status === 'downloaded' ? (
+            <button className="primary install-update-button" onClick={() => void installUpdate()}>Qayta o‘rnatish</button>
+          ) : updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'busy' ? (
+            <button className="primary" disabled><span className="button-loader" />{updateState.status === 'downloading' ? 'Yuklanmoqda...' : 'Tekshirilmoqda...'}</button>
+          ) : (
+            <button className="primary" onClick={() => void checkForUpdates()}>Yangilanishni tekshirish</button>
+          )}
+        </div>
+        {(updateState.status === 'downloading' || updateState.status === 'downloaded') && (
+          <div className="update-progress-wrap">
+            <div className="update-progress-labels">
+              <span>Yuklandi: <b>{formatBytes(updateState.transferred)}</b></span>
+              <span>Qoldi: <b>{formatBytes(Math.max(0, (updateState.total ?? 0) - (updateState.transferred ?? 0)))}</b></span>
+              <strong>{Math.round(updateState.percent ?? 0)}%</strong>
+            </div>
+            <div className="update-progress-track"><span style={{ width: `${Math.min(100, updateState.percent ?? 0)}%` }} /></div>
+          </div>
+        )}
       </section>
       <section className="panel">
         <div className="panel-title"><div><h2>Student ma’lumotini olish</h2><p>Student dasturida F.I.Sh qanday kiritilishini belgilang</p></div></div>
@@ -917,32 +980,6 @@ function Settings(props: {
             {!props.roster.length && <div className="empty-state">Face ID bazasi hali yuklanmagan.</div>}
           </div>
           <div className="settings-footer"><small>Studentdagi noma’lum yuz so‘rovlari serverning Monitor qismida o‘qituvchi tomonidan tasdiqlanadi.</small><button className="primary" disabled={saving} onClick={() => void save()}>Face ID rejimini saqlash</button></div>
-          {registrationOpen && (
-            <div className="modal-backdrop">
-              <div className="modal face-registration-modal">
-                <div className="modal-header">
-                  <div><h2>Face ID registratsiya</h2><p>Student ma’lumotlari va yuz rasmini kiriting.</p></div>
-                  <button className="close" onClick={() => setRegistrationOpen(false)}>×</button>
-                </div>
-                <div className="editor-body">
-                  {error && <div className="alert error">{error}</div>}
-                  <div className="form-grid">
-                    <label><span>Ism</span><input value={registration.firstName} onChange={(event) => setRegistration({ ...registration, firstName: event.target.value })} placeholder="Ali" /></label>
-                    <label><span>Familiya</span><input value={registration.lastName} onChange={(event) => setRegistration({ ...registration, lastName: event.target.value })} placeholder="Aliyev" /></label>
-                    <label><span>Guruh</span><input value={registration.group} onChange={(event) => setRegistration({ ...registration, group: event.target.value })} placeholder="101-guruh" /></label>
-                  </div>
-                  <button className={registration.photoDataUrl ? 'photo-picker selected' : 'photo-picker'} onClick={() => void pickRegistrationPhoto()}>
-                    <span>{registration.photoDataUrl ? '✓' : '＋'}</span>
-                    <div><strong>{registration.photoName || 'Yuz rasmini tanlash'}</strong><small>JPG, JPEG yoki PNG · rasmda bitta yuz bo‘lsin</small></div>
-                  </button>
-                </div>
-                <div className="modal-footer">
-                  <button className="secondary" onClick={() => setRegistrationOpen(false)}>Bekor qilish</button>
-                  <button className="primary" disabled={registering} onClick={() => void registerFace()}>{registering ? 'Yuz tekshirilmoqda...' : 'Registratsiya qilish'}</button>
-                </div>
-              </div>
-            </div>
-          )}
         </section>
       ) : (
         <section className="panel">
@@ -992,8 +1029,7 @@ function TestEditor({ initial, onClose, onSave }: { initial: Test; onClose: () =
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
+    <section className="panel page-editor test-editor-page">
         <div className="modal-header"><div><h2>{test.id ? 'Testni tahrirlash' : 'Yangi test yaratish'}</h2><p>Savollar va student uchun ishlash qoidalarini belgilang.</p></div><button className="close" onClick={onClose}>×</button></div>
         <div className="editor-body">
           {error && <div className="alert error">{error}</div>}
@@ -1031,8 +1067,7 @@ function TestEditor({ initial, onClose, onSave }: { initial: Test; onClose: () =
           <button className="add-question" onClick={() => setTest((current) => ({ ...current, questions: [...current.questions, emptyQuestion()] }))}>+ Savol qo‘shish</button>
         </div>
         <div className="modal-footer"><button className="secondary" onClick={onClose}>Bekor qilish</button><button className="primary" disabled={saving} onClick={() => void submit()}>{saving ? 'Saqlanmoqda...' : 'Testni saqlash'}</button></div>
-      </div>
-    </div>
+    </section>
   )
 }
 

@@ -87,7 +87,7 @@ td strong { color: #26344b; font-size: 11px; }
 .face-request-state { padding: 7px 9px; white-space: nowrap; border-radius: 8px; color: #97651c; background: #fff3dc; font-size: 8px; font-weight: 750; }
 .face-request-editor { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: start; }
 .face-request-editor > img { width: 180px; height: 180px; border-radius: 12px; object-fit: cover; background: #e6ebf3; }
-.face-registration-modal .face-request-form { grid-template-columns: 1fr; }
+.face-enrollment-page .face-request-form { grid-template-columns: 1fr; }
 
 .test-grid { display: grid; grid-template-columns: repeat(3, minmax(280px, 1fr)); gap: 16px; }
 .tests-storage-state { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; padding: 12px 15px; border: 1px solid #bcd9ee; border-radius: 10px; color: #286ab4; background: #f0f7fd; }
@@ -150,6 +150,14 @@ td strong { color: #26344b; font-size: 11px; }
 .update-content > div { display: grid; gap: 5px; }
 .update-content strong { color: #344159; font-size: 11px; }
 .update-content small { color: #7d899b; font-size: 9px; line-height: 1.5; }
+.update-progress-wrap { padding: 0 20px 18px; }
+.update-progress-labels { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; color: #68778e; font-size: 9px; }
+.update-progress-labels > strong { margin-left: auto; color: #3970df; font-size: 11px; }
+.update-progress-track { height: 8px; overflow: hidden; border-radius: 999px; background: #e7edf7; }
+.update-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3970df, #29aa75); transition: width .2s ease; }
+.button-loader { width: 12px; height: 12px; display: inline-block; margin-right: 7px; vertical-align: -2px; border: 2px solid #ffffff66; border-top-color: #fff; border-radius: 50%; animation: update-spin .8s linear infinite; }
+.install-update-button { background: #20a66c !important; }
+@keyframes update-spin { to { transform: rotate(360deg); } }
 .access-mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px 20px 12px; }
 .allowed-ip-editor { padding: 4px 20px 18px; }
 .allowed-ip-editor label > span { display: block; margin-bottom: 7px; color: #627086; font-size: 9px; font-weight: 750; }
@@ -200,6 +208,9 @@ textarea:focus { border-color: #3970df; box-shadow: 0 0 0 3px #3970df0e; }
 .modal { width: min(1040px, 96vw); max-height: 94vh; display: flex; flex-direction: column; border-radius: 15px; background: #fff; box-shadow: 0 30px 90px #0005; overflow: hidden; }
 .modal.result-modal { width: min(850px, 94vw); }
 .modal.face-registration-modal { width: min(720px, 94vw); }
+.page-editor { margin-bottom: 22px; overflow: hidden; }
+.page-editor .editor-body { overflow: visible; }
+.test-editor-page .editor-body { max-height: none; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 23px; border-bottom: 1px solid #e8ebf0; }
 .modal-header h2 { margin: 0 0 4px; font-size: 18px; }
 .modal-header p { margin: 0; color: #919baa; font-size: 9px; }
@@ -208,7 +219,7 @@ textarea:focus { border-color: #3970df; box-shadow: 0 0 0 3px #3970df0e; }
 .settings-box { padding: 17px; border: 1px solid #dce5f4; border-radius: 11px; background: #f8faff; }
 .settings-box > h3 { margin: 0 0 13px; color: #315fbf; font-size: 12px; }
 .form-grid { display: grid; grid-template-columns: 1fr 180px; gap: 13px; }
-.face-registration-modal .form-grid { grid-template-columns: 1fr 1fr 1fr; }
+.registration-form-grid { grid-template-columns: 1fr 1fr 1fr; }
 .form-grid.four { grid-template-columns: 1.4fr .65fr .8fr 1fr; }
 .form-grid label > span, .settings-box label > span { display: block; color: #627086; font-size: 8px; font-weight: 750; margin-bottom: 6px; }
 input, select { width: 100%; border: 1px solid #dce2ea; border-radius: 8px; padding: 10px 11px; color: #2d3b51; background: #fff; outline: none; font-size: 10px; }
@@ -262,6 +273,6 @@ input:focus, select:focus { border-color: #3970df; box-shadow: 0 0 0 3px #3970df
   .test-grid { grid-template-columns: 1fr 1fr; }
   .exam-history-grid { grid-template-columns: 1fr; }
   .form-grid.four { grid-template-columns: 1fr 1fr; }
-  .face-registration-modal .form-grid { grid-template-columns: 1fr 1fr; }
+  .registration-form-grid { grid-template-columns: 1fr 1fr; }
   .settings-grid { grid-template-columns: 1fr; }
 }

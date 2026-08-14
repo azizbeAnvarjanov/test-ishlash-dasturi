@@ -1,8 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { AppUpdateState } from '@test/shared'
 
 contextBridge.exposeInMainWorld('serverDesktop', {
   getInfo: () => ipcRenderer.invoke('server:get-info'),
   checkForUpdates: () => ipcRenderer.invoke('server:check-for-updates'),
+  getUpdateState: () => ipcRenderer.invoke('server:get-update-state'),
+  downloadUpdate: () => ipcRenderer.invoke('server:download-update'),
+  installUpdate: () => ipcRenderer.invoke('server:install-update'),
+  onUpdateStatus: (callback: (state: AppUpdateState) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: AppUpdateState): void => callback(state)
+    ipcRenderer.on('server:update-status', listener)
+    return () => ipcRenderer.removeListener('server:update-status', listener)
+  },
   openDataFolder: () => ipcRenderer.invoke('server:open-data-folder'),
   openTestsFolder: () => ipcRenderer.invoke('server:open-tests-folder'),
   chooseFaceFolder: () => ipcRenderer.invoke('server:choose-face-folder'),
