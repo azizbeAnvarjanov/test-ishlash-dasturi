@@ -1,103 +1,127 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import electronUpdater from 'electron-updater'
+import type { AppUpdateState } from '@test/shared'
 
 const { autoUpdater } = electronUpdater
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 
-export interface UpdateCheckResponse {
-  status: 'available' | 'current' | 'busy' | 'blocked' | 'unavailable' | 'error'
-  message: string
-  currentVersion: string
-  availableVersion?: string
-}
-
 export interface UpdateController {
-  checkNow: () => Promise<UpdateCheckResponse>
+  checkNow: () => Promise<AppUpdateState>
+  downloadNow: () => Promise<AppUpdateState>
+  installNow: () => Promise<AppUpdateState>
+  getState: () => AppUpdateState
 }
 
 export const setupAutoUpdate = (
   getWindow: () => BrowserWindow | null,
   isExamActive: () => boolean
 ): UpdateController => {
-  let checking = false
+  let state: AppUpdateState = {
+    status: 'idle',
+    message: 'Yangilanishni tekshirishingiz mumkin.',
+    currentVersion: app.getVersion()
+  }
 
-  const checkNow = async (): Promise<UpdateCheckResponse> => {
-    const currentVersion = app.getVersion()
-    if (isExamActive()) {
-      return { status: 'blocked', currentVersion, message: 'Faol imtihon paytida yangilanishni boshlash mumkin emas.' }
-    }
-    if (!app.isPackaged) {
-      return { status: 'unavailable', currentVersion, message: 'Yangilanish faqat o‘rnatilgan dasturda tekshiriladi.' }
-    }
-    if (checking) return { status: 'busy', currentVersion, message: 'Yangilanish allaqachon tekshirilmoqda...' }
+  const publish = (patch: Partial<AppUpdateState>): AppUpdateState => {
+    state = { ...state, ...patch }
+    const window = getWindow()
+    if (window && !window.isDestroyed()) window.webContents.send('student:update-status', state)
+    return state
+  }
 
-    checking = true
+  const blocked = (): AppUpdateState | null =>
+    isExamActive()
+      ? publish({ status: 'blocked', message: 'Faol imtihon paytida yangilanishni boshlash mumkin emas.' })
+      : null
+
+  const checkNow = async (): Promise<AppUpdateState> => {
+    const blockedState = blocked()
+    if (blockedState) return blockedState
+    if (!app.isPackaged) return publish({ status: 'unavailable', message: 'Yangilanish faqat o‘rnatilgan dasturda tekshiriladi.' })
+    if (['checking', 'downloading'].includes(state.status)) return publish({ status: 'busy', message: 'Yangilanish jarayoni davom etmoqda...' })
+
+    publish({ status: 'checking', message: 'Yangi versiya tekshirilmoqda...' })
     try {
       const result = await autoUpdater.checkForUpdates()
       if (result?.isUpdateAvailable) {
-        return {
+        return publish({
           status: 'available',
-          currentVersion,
           availableVersion: result.updateInfo.version,
-          message: `${result.updateInfo.version} versiyasi topildi. Yuklash oynasidan davom eting.`
-        }
+          message: `${result.updateInfo.version} versiyasi topildi. Yuklashni boshlashingiz mumkin.`,
+          percent: 0,
+          transferred: 0,
+          total: undefined
+        })
       }
-      return { status: 'current', currentVersion, message: `Sizda eng yangi ${currentVersion} versiyasi o‘rnatilgan.` }
+      return publish({
+        status: 'current',
+        availableVersion: undefined,
+        message: `Sizda eng yangi ${state.currentVersion} versiyasi o‘rnatilgan.`,
+        percent: undefined,
+        transferred: undefined,
+        total: undefined
+      })
     } catch (error) {
       console.error('Student yangilanishini tekshirishda xato:', error)
-      return {
+      return publish({
         status: 'error',
-        currentVersion,
         message: error instanceof Error ? `Tekshirishda xato: ${error.message}` : 'Yangilanishni tekshirib bo‘lmadi.'
-      }
-    } finally {
-      checking = false
+      })
     }
   }
 
-  if (!app.isPackaged) return { checkNow }
+  const downloadNow = async (): Promise<AppUpdateState> => {
+    const blockedState = blocked()
+    if (blockedState) return blockedState
+    if (state.status !== 'available') return publish({ status: 'error', message: 'Avval yangi versiyani tekshiring.' })
+    publish({ status: 'downloading', message: 'Yangilanish yuklanmoqda...', percent: 0, transferred: 0 })
+    try {
+      await autoUpdater.downloadUpdate()
+      return state
+    } catch (error) {
+      console.error('Student yangilanishini yuklashda xato:', error)
+      return publish({
+        status: 'error',
+        message: error instanceof Error ? `Yuklashda xato: ${error.message}` : 'Yangilanishni yuklab bo‘lmadi.'
+      })
+    }
+  }
+
+  const installNow = async (): Promise<AppUpdateState> => {
+    const blockedState = blocked()
+    if (blockedState) return blockedState
+    if (state.status !== 'downloaded') return publish({ status: 'error', message: 'Yangilanish hali to‘liq yuklanmagan.' })
+    const next = publish({ message: 'Dastur qayta ishga tushib, yangi versiya o‘rnatiladi...' })
+    setImmediate(() => autoUpdater.quitAndInstall(false, true))
+    return next
+  }
+
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
-
-  autoUpdater.on('update-available', async (info) => {
-    if (isExamActive()) return
-    const window = getWindow()
-    if (!window || window.isDestroyed()) return
-    const answer = await dialog.showMessageBox(window, {
-      type: 'info',
-      title: 'Yangi Easy Testing Student versiyasi',
-      message: `Easy Testing Student ${info.version} versiyasi mavjud.`,
-      detail: 'Yangilanishni hozir yuklab olasizmi?',
-      buttons: ['Yuklab olish', 'Keyinroq'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true
+  autoUpdater.autoInstallOnAppQuit = false
+  autoUpdater.on('download-progress', (progress) => {
+    publish({
+      status: 'downloading',
+      message: 'Yangilanish yuklanmoqda...',
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond
     })
-    if (answer.response === 0) void autoUpdater.downloadUpdate()
   })
-
-  autoUpdater.on('update-downloaded', async (info) => {
-    if (isExamActive()) return
-    const window = getWindow()
-    if (!window || window.isDestroyed()) return
-    const answer = await dialog.showMessageBox(window, {
-      type: 'question',
-      title: 'Yangilanish tayyor',
-      message: `Easy Testing Student ${info.version} yuklandi.`,
-      detail: 'Dastur yopilib, yangi versiya o‘rnatiladi.',
-      buttons: ['Hozir o‘rnatish', 'Keyinroq'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true
+  autoUpdater.on('update-downloaded', (info) => {
+    publish({
+      status: 'downloaded',
+      availableVersion: info.version,
+      message: 'Yangilanish to‘liq yuklandi. Qayta o‘rnatish tugmasini bosing.',
+      percent: 100,
+      transferred: state.total ?? state.transferred
     })
-    if (answer.response === 0) autoUpdater.quitAndInstall(false, true)
   })
+  autoUpdater.on('error', (error) => console.error('Student auto-update xatosi:', error.message))
 
-  autoUpdater.on('error', (error) => {
-    console.error('Student auto-update xatosi:', error.message)
-  })
-
-  setTimeout(() => void checkNow(), 8_000)
-  setInterval(() => void checkNow(), CHECK_INTERVAL_MS)
-  return { checkNow }
+  if (app.isPackaged) {
+    setTimeout(() => void checkNow(), 8_000)
+    setInterval(() => void checkNow(), CHECK_INTERVAL_MS)
+  }
+  return { checkNow, downloadNow, installNow, getState: () => state }
 }

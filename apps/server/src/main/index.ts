@@ -579,6 +579,9 @@ app.whenReady().then(async () => {
   createWindow()
   const updater = setupAutoUpdate(() => mainWindow)
   ipcMain.handle('server:check-for-updates', () => updater.checkNow())
+  ipcMain.handle('server:get-update-state', () => updater.getState())
+  ipcMain.handle('server:download-update', () => updater.downloadNow())
+  ipcMain.handle('server:install-update', () => updater.installNow())
 })
 
 app.on('window-all-closed', () => {

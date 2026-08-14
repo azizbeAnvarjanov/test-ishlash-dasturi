@@ -1,4 +1,4 @@
-import type { ExamSession, ResultReceipt, StudentSubmission } from '@test/shared'
+import type { AppUpdateState, ExamSession, ResultReceipt, StudentSubmission } from '@test/shared'
 
 export {}
 
@@ -6,7 +6,11 @@ declare global {
   interface Window {
     studentDesktop: {
       getInfo: () => Promise<{ deviceId: string; computerName: string; resultsDirectory: string }>
-      checkForUpdates: () => Promise<{ status: 'available' | 'current' | 'busy' | 'blocked' | 'unavailable' | 'error'; message: string; currentVersion: string; availableVersion?: string }>
+      checkForUpdates: () => Promise<AppUpdateState>
+      getUpdateState: () => Promise<AppUpdateState>
+      downloadUpdate: () => Promise<AppUpdateState>
+      installUpdate: () => Promise<AppUpdateState>
+      onUpdateStatus: (callback: (state: AppUpdateState) => void) => () => void
       openResults: () => Promise<string>
       setExamMode: (enabled: boolean) => Promise<void>
       saveDraft: (exam: ExamSession, submission: StudentSubmission) => Promise<string>

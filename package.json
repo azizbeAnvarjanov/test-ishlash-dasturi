@@ -1,12 +1,16 @@
 {
   "name": "test-ishlash-dasturi",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "Lokal tarmoq orqali test o'tkazish uchun Server va Student Electron dasturlari",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2"
+  },
   "scripts": {
     "dev:server": "npm run dev --workspace=@test/server",
     "dev:student": "npm run dev --workspace=@test/student",

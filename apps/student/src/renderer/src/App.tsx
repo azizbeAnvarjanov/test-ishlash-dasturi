@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createId,
+  type AppUpdateState,
   type BootstrapData,
   type ExamSession,
   type FaceEnrollmentStatus,
@@ -23,6 +24,12 @@ type CameraDevice = { deviceId: string; label: string }
 const PROCTOR_MAX_WARNINGS = 3
 // Inferensiyalar orasida CPU/GPU va React UI uchun bo'sh vaqt qoldiramiz.
 const PROCTOR_CHECK_INTERVAL_MS = 1000
+
+const formatBytes = (bytes = 0): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+}
 const PROCTOR_VIOLATION_GRACE_MS = 3000
 const PROCTOR_MAX_RESULT_AGE_MS = 2500
 const PROCTOR_WARNING_COOLDOWN_MS = 3500
@@ -581,8 +588,16 @@ function SetupScreen(props: {
   const [cameraLoading, setCameraLoading] = useState(false)
   const [cameraStatus, setCameraStatus] = useState('Kameralar aniqlanmoqda...')
   const [cameraRefreshKey, setCameraRefreshKey] = useState(0)
-  const [updateChecking, setUpdateChecking] = useState(false)
-  const [updateMessage, setUpdateMessage] = useState('Yangi versiyani qo‘lda tekshirishingiz mumkin.')
+  const [updateState, setUpdateState] = useState<AppUpdateState>({
+    status: 'idle',
+    message: 'Yangi versiyani qo‘lda tekshirishingiz mumkin.',
+    currentVersion: ''
+  })
+
+  useEffect(() => {
+    void window.studentDesktop.getUpdateState().then(setUpdateState)
+    return window.studentDesktop.onUpdateStatus(setUpdateState)
+  }, [])
 
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices || !navigator.mediaDevices?.getUserMedia) {
@@ -653,17 +668,15 @@ function SetupScreen(props: {
   )
 
   const checkForUpdates = async (): Promise<void> => {
-    setUpdateChecking(true)
-    setUpdateMessage('GitHub orqali yangilanish tekshirilmoqda...')
     try {
-      const result = await window.studentDesktop.checkForUpdates()
-      setUpdateMessage(result.message)
+      setUpdateState(await window.studentDesktop.checkForUpdates())
     } catch (reason) {
-      setUpdateMessage(reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.')
-    } finally {
-      setUpdateChecking(false)
+      setUpdateState((current) => ({ ...current, status: 'error', message: reason instanceof Error ? reason.message : 'Yangilanishni tekshirib bo‘lmadi.' }))
     }
   }
+
+  const downloadUpdate = async (): Promise<void> => setUpdateState(await window.studentDesktop.downloadUpdate())
+  const installUpdate = async (): Promise<void> => setUpdateState(await window.studentDesktop.installUpdate())
 
   return (
     <div className="setup-page">
@@ -714,8 +727,24 @@ function SetupScreen(props: {
             <small>{cameraStatus}</small>
           </div>
           <div className="student-update-settings">
-            <div><strong>Dastur yangilanishi</strong><small>{updateMessage}</small></div>
-            <button disabled={updateChecking} onClick={() => void checkForUpdates()}>{updateChecking ? 'Tekshirilmoqda...' : 'Yangilanishni tekshirish'}</button>
+            <div className="student-update-row">
+              <div><strong>Dastur yangilanishi</strong><small>{updateState.message}</small></div>
+              {updateState.status === 'available' ? (
+                <button onClick={() => void downloadUpdate()}>Yuklash</button>
+              ) : updateState.status === 'downloaded' ? (
+                <button className="install-update-button" onClick={() => void installUpdate()}>Qayta o‘rnatish</button>
+              ) : updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'busy' ? (
+                <button disabled><span className="button-loader" />{updateState.status === 'downloading' ? 'Yuklanmoqda...' : 'Tekshirilmoqda...'}</button>
+              ) : (
+                <button onClick={() => void checkForUpdates()}>Yangilanishni tekshirish</button>
+              )}
+            </div>
+            {(updateState.status === 'downloading' || updateState.status === 'downloaded') && (
+              <div className="update-progress-wrap">
+                <div className="update-progress-labels"><span>Yuklandi: <b>{formatBytes(updateState.transferred)}</b></span><span>Qoldi: <b>{formatBytes(Math.max(0, (updateState.total ?? 0) - (updateState.transferred ?? 0)))}</b></span><strong>{Math.round(updateState.percent ?? 0)}%</strong></div>
+                <div className="update-progress-track"><span style={{ width: `${Math.min(100, updateState.percent ?? 0)}%` }} /></div>
+              </div>
+            )}
           </div>
           <button className="connect-button" disabled={props.connecting} onClick={props.onConnect}>{props.connecting ? 'Ulanmoqda...' : 'Serverga ulanish'} <b>→</b></button>
           <button className="folder-button" onClick={() => void window.studentDesktop.openResults()}>Natijalar papkasini ochish</button>

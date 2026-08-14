@@ -169,6 +169,17 @@ export type ResultsArchive = {
   results: StoredResult[]
 }
 
+export type AppUpdateState = {
+  status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'current' | 'busy' | 'blocked' | 'unavailable' | 'error'
+  message: string
+  currentVersion: string
+  availableVersion?: string
+  percent?: number
+  transferred?: number
+  total?: number
+  bytesPerSecond?: number
+}
+
 export type ServerEvent =
   | { type: 'server:ready'; tests: PublishedTest[]; settings: ServerSettings }
   | { type: 'tests:changed'; tests: PublishedTest[] }
