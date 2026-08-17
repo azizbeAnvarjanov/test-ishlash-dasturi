@@ -276,6 +276,10 @@ function App(): React.JSX.Element {
       setRoster(data.roster)
       setPublishedTests(data.tests)
       localStorage.setItem('server', address)
+      // Face ID modeli identity sahifasi chizilishini kutmay yuklana boshlaydi.
+      // Kamera ochilishi bilan parallel ketgani uchun past quvvatli kompyuterda
+      // ketma-ket 2 ta kutish yig'ilib qolmaydi.
+      if (data.settings.identityMode === 'face') void prepareFaceEngine().catch(() => undefined)
       setScreen('identity')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Server topilmadi')
@@ -771,13 +775,37 @@ function FaceIdentityScreen(props: {
   const [notFound, setNotFound] = useState(false)
   const [enrollmentRequestId, setEnrollmentRequestId] = useState('')
   const enrollmentCaptureRef = useRef(false)
+  const cachedDescriptorRef = useRef<{ value: number[]; capturedAt: number } | null>(null)
+  const descriptorPromiseRef = useRef<Promise<number[]> | null>(null)
+
+  const getFastDescriptor = useCallback(async (): Promise<number[]> => {
+    const cached = cachedDescriptorRef.current
+    // Bir sahifada bir xil student kameraga qarab turgani uchun juda yaqin
+    // vaqtda olingan descriptorni qayta hisoblash shart emas.
+    if (cached && performance.now() - cached.capturedAt < 8_000) return cached.value
+    if (descriptorPromiseRef.current) return descriptorPromiseRef.current
+    if (!videoRef.current) throw new Error('Kamera hali tayyor emas')
+
+    const promise = extractFaceDescriptor(videoRef.current)
+      .then((value) => {
+        cachedDescriptorRef.current = { value, capturedAt: performance.now() }
+        return value
+      })
+      .finally(() => {
+        descriptorPromiseRef.current = null
+      })
+    descriptorPromiseRef.current = promise
+    return promise
+  }, [])
 
   useEffect(() => {
     let active = true
     void (async () => {
       try {
-        await prepareFaceEngine()
-        const stream = await openCameraStream(props.cameraDeviceId, 640, 480)
+        const [, stream] = await Promise.all([
+          prepareFaceEngine(),
+          openCameraStream(props.cameraDeviceId, 640, 480)
+        ])
         if (!active) {
           stream.getTracks().forEach((track) => track.stop())
           return
@@ -788,16 +816,26 @@ function FaceIdentityScreen(props: {
           await videoRef.current.play()
         }
         setReady(true)
-        setStatus('Kameraga to‘g‘ri qarang va “Yuzni skanerlash” tugmasini bosing.')
+        setStatus('Kameraga to‘g‘ri qarang. Yuz tezkor skanerlash uchun tayyorlanmoqda...')
+        // Og'ir inferensiya tugma bosilishidan oldin boshlanadi. Foydalanuvchi
+        // darhol bossa ham scan() aynan shu Promise'ni kutadi, ikkinchi ish ochmaydi.
+        void getFastDescriptor()
+          .then(() => {
+            if (active) setStatus('Yuz tayyor. “Yuzni skanerlash” tugmasini bosing.')
+          })
+          .catch(() => {
+            if (active) setStatus('Kameraga to‘g‘ri qarang va “Yuzni skanerlash” tugmasini bosing.')
+          })
       } catch (reason) {
-        setStatus(reason instanceof Error ? reason.message : 'Kamerani ishga tushirib bo‘lmadi')
+        if (active) setStatus(reason instanceof Error ? reason.message : 'Kamerani ishga tushirib bo‘lmadi')
       }
     })()
     return () => {
       active = false
+      cachedDescriptorRef.current = null
       streamRef.current?.getTracks().forEach((track) => track.stop())
     }
-  }, [props.cameraDeviceId])
+  }, [props.cameraDeviceId, getFastDescriptor])
 
   useEffect(() => {
     if (!enrollmentRequestId) return undefined
@@ -857,7 +895,7 @@ function FaceIdentityScreen(props: {
     setNotFound(false)
     setStatus('Yuz skaner qilinmoqda...')
     try {
-      const descriptor = await extractFaceDescriptor(videoRef.current)
+      const descriptor = await getFastDescriptor()
       const response = await api<FaceRecognitionResponse>(props.server, '/face/recognize', {
         method: 'POST',
         body: JSON.stringify({ descriptor })

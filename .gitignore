@@ -8,4 +8,6 @@ release/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+.env
+.env.*
 config.bat
