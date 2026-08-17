@@ -20,7 +20,9 @@ let identityReady: Promise<void> | null = null
 let proctorReady: Promise<void> | null = null
 
 const createIdentityHuman = (modelBasePath: string): Human => new Human({
-  backend: 'webgl',
+  // HumanGL WebWorker ichidagi inference uchun optimallashtirilgan. Oddiy
+  // WebGL ayrim eski Intel/AMD qurilmalarda software shaderga tushib qoladi.
+  backend: 'humangl',
   modelBasePath,
   cacheSensitivity: 0,
   warmup: 'none',
@@ -43,7 +45,7 @@ const createIdentityHuman = (modelBasePath: string): Human => new Human({
 })
 
 const createProctorHuman = (modelBasePath: string): Human => new Human({
-  backend: 'webgl',
+  backend: 'humangl',
   modelBasePath,
   cacheSensitivity: 0,
   warmup: 'none',

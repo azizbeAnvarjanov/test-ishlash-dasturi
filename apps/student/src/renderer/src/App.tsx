@@ -782,7 +782,7 @@ function FaceIdentityScreen(props: {
     const cached = cachedDescriptorRef.current
     // Bir sahifada bir xil student kameraga qarab turgani uchun juda yaqin
     // vaqtda olingan descriptorni qayta hisoblash shart emas.
-    if (cached && performance.now() - cached.capturedAt < 8_000) return cached.value
+    if (cached && performance.now() - cached.capturedAt < 60_000) return cached.value
     if (descriptorPromiseRef.current) return descriptorPromiseRef.current
     if (!videoRef.current) throw new Error('Kamera hali tayyor emas')
 
@@ -815,16 +815,21 @@ function FaceIdentityScreen(props: {
           videoRef.current.srcObject = stream
           await videoRef.current.play()
         }
-        setReady(true)
         setStatus('Kameraga to‘g‘ri qarang. Yuz tezkor skanerlash uchun tayyorlanmoqda...')
         // Og'ir inferensiya tugma bosilishidan oldin boshlanadi. Foydalanuvchi
         // darhol bossa ham scan() aynan shu Promise'ni kutadi, ikkinchi ish ochmaydi.
         void getFastDescriptor()
           .then(() => {
-            if (active) setStatus('Yuz tayyor. “Yuzni skanerlash” tugmasini bosing.')
+            if (active) {
+              setReady(true)
+              setStatus('Yuz tayyor. “Yuzni skanerlash” tugmasini bosing.')
+            }
           })
           .catch(() => {
-            if (active) setStatus('Kameraga to‘g‘ri qarang va “Yuzni skanerlash” tugmasini bosing.')
+            if (active) {
+              setReady(true)
+              setStatus('Kameraga to‘g‘ri qarang va “Yuzni skanerlash” tugmasini bosing.')
+            }
           })
       } catch (reason) {
         if (active) setStatus(reason instanceof Error ? reason.message : 'Kamerani ishga tushirib bo‘lmadi')

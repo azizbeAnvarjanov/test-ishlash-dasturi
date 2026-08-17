@@ -117,9 +117,9 @@ export const extractFaceDescriptor = async (
 ): Promise<number[]> => {
   if (!(input instanceof HTMLVideoElement)) throw new Error('Yuzni kamera orqali skanerlang')
   await prepareFaceEngine()
-  // Detector baribir kadrni 256px model o'lchamiga keltiradi. 320px kadr
-  // embedding sifatini saqlab, workerga uzatiladigan pikselni qariyb 31% kamaytiradi.
-  const result = await runFaceTask('identity', captureVideoFrame(input, 320))
+  // Detectorning real kirishi 256px. Kattaroq kadr GPUga ortiqcha piksel
+  // ko'chiradi va model ichida yana 256px ga kichraytiriladi.
+  const result = await runFaceTask('identity', captureVideoFrame(input, 256))
   if (!result || result.faceCount === 0) throw new Error('Kamerada yuz topilmadi. Kameraga to‘g‘ri qarang.')
   if (result.faceCount > 1) throw new Error('Kamerada faqat bitta odam bo‘lishi kerak.')
   if (!result.embedding || result.embedding.length < 64) {
