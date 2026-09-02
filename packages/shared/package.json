@@ -1,12 +1,12 @@
 {
   "name": "@test/shared",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "node init && tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
