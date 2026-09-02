@@ -47,6 +47,34 @@ select:focus { border-color: #3268df; box-shadow: 0 0 0 3px #3268df12; }
 .folder-button, .text-button { border: 0; background: transparent; color: #5470a8; font-size: 12px; display: block; margin: 15px auto 5px; }
 .path { display: block; color: #a0a8b5; text-align: center; font-size: 9px; word-break: break-all; }
 .computer-chip { color: #66748a; background: #f4f7fb; border: 1px solid #e5eaf1; border-radius: 9px; padding: 11px 13px; margin-bottom: 14px; font-size: 12px; }
+.connection-summary { display: grid; gap: 1px; margin-bottom: 14px; overflow: hidden; border: 1px solid #e1e7f0; border-radius: 11px; background: #e1e7f0; }
+.connection-summary > div { padding: 12px 14px; background: #f7f9fc; }
+.connection-summary small, .connection-summary strong { display: block; }
+.connection-summary small { margin-bottom: 4px; color: #8a95a6; font-size: 9px; text-transform: uppercase; letter-spacing: .6px; }
+.connection-summary strong { color: #2b3d59; font-size: 12px; }
+.settings-button { width: 100%; display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 11px; margin: 4px 0 14px; padding: 11px 13px; border: 1px solid #dbe4f2; border-radius: 10px; color: #345887; background: #f7faff; text-align: left; }
+.settings-button > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: #3268df; font-size: 17px; }
+.settings-button strong, .settings-button small { display: block; }
+.settings-button strong { font-size: 12px; }
+.settings-button small { margin-top: 3px; color: #8290a4; font-size: 9px; }
+.settings-button > b { font-size: 17px; }
+.student-settings-page { min-height: 100vh; padding: 34px; background: radial-gradient(circle at top, #edf4ff, #f5f7fb 55%); }
+.student-settings-card { width: min(1050px, 100%); margin: 0 auto; overflow: hidden; border: 1px solid #dfe6ef; border-radius: 18px; background: #fff; box-shadow: 0 18px 60px #243f6b14; }
+.student-settings-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 25px 28px; border-bottom: 1px solid #e8edf4; }
+.student-settings-header h1 { margin: 7px 0 4px; font-size: 27px; }
+.student-settings-header p { margin: 0; color: #8190a4; font-size: 12px; }
+.student-settings-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 16px; padding: 20px; }
+.settings-section { padding: 18px; border: 1px solid #e2e8f1; border-radius: 13px; background: #fbfcfe; }
+.settings-section:first-child, .update-settings-section { align-self: start; }
+.settings-section-title { display: flex; gap: 11px; align-items: center; margin-bottom: 15px; }
+.settings-section-title > span { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 9px; color: #3268df; background: #eaf1ff; font-size: 17px; }
+.settings-section-title h2 { margin: 0 0 3px; font-size: 15px; }
+.settings-section-title p { margin: 0; color: #8793a5; font-size: 9px; }
+.settings-section label > span { display: block; margin-bottom: 7px; color: #536176; font-size: 10px; font-weight: 700; }
+.settings-section .camera-settings, .settings-section .student-update-settings { margin: 0; }
+.student-settings-footer { display: flex; align-items: center; justify-content: flex-end; gap: 18px; padding: 16px 22px; border-top: 1px solid #e8edf4; }
+.student-settings-footer > small { color: #8995a6; font-size: 9px; }
+.student-settings-footer .connect-button.compact { min-width: 210px; margin: 0; }
 .camera-settings { margin-bottom: 14px; padding: 12px; border: 1px solid #e5eaf1; border-radius: 10px; background: #f8fbff; }
 .camera-settings-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
 .camera-settings-head > span { color: #505d70; font-size: 11px; font-weight: 750; }

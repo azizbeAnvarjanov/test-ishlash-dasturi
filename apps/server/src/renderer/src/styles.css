@@ -203,6 +203,9 @@ textarea:focus { border-color: #3970df; box-shadow: 0 0 0 3px #3970df0e; }
 .face-profile-list strong { color: #354258; font-size: 9px; }
 .face-profile-list small { color: #929cab; font-size: 8px; }
 .face-delete-button { grid-column: 3; grid-row: 1 / span 2; border: 0; border-radius: 7px; padding: 7px 9px; color: #b74651; background: #ffedef; font-size: 8px; font-weight: 700; }
+.face-profile-search { display: flex; align-items: center; gap: 12px; margin: 15px 20px 8px; }
+.face-profile-search input { flex: 1; }
+.face-profile-search span { flex: 0 0 auto; color: #7e8ba0; font-size: 9px; font-weight: 700; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 25px; background: #0e1728bb; }
 .modal { width: min(1040px, 96vw); max-height: 94vh; display: flex; flex-direction: column; border-radius: 15px; background: #fff; box-shadow: 0 30px 90px #0005; overflow: hidden; }
