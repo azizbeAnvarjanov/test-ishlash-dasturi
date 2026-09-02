@@ -592,6 +592,7 @@ function Settings(props: {
   const [saving, setSaving] = useState(false)
   const [faceImporting, setFaceImporting] = useState(false)
   const [faceProgress, setFaceProgress] = useState('')
+  const [faceSearch, setFaceSearch] = useState('')
   const [error, setError] = useState('')
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const [registering, setRegistering] = useState(false)
@@ -839,6 +840,11 @@ function Settings(props: {
   const downloadUpdate = async (): Promise<void> => setUpdateState(await window.serverDesktop.downloadUpdate())
   const installUpdate = async (): Promise<void> => setUpdateState(await window.serverDesktop.installUpdate())
 
+  const visibleFaceProfiles = props.roster.filter((student) => {
+    const query = faceSearch.trim().toLocaleLowerCase('uz-UZ')
+    return !query || student.fish.toLocaleLowerCase('uz-UZ').includes(query)
+  })
+
   if (registrationOpen) {
     return (
       <section className="panel page-editor face-registration-page">
@@ -968,8 +974,12 @@ function Settings(props: {
           </div>
           {faceProgress && <div className="face-import-progress">{faceProgress}</div>}
           {error && <div className="alert error">{error}</div>}
+          <div className="face-profile-search">
+            <input value={faceSearch} onChange={(event) => setFaceSearch(event.target.value)} placeholder="Student ismi bo‘yicha qidirish" />
+            <span>{visibleFaceProfiles.length}/{props.roster.length} ta profil</span>
+          </div>
           <div className="face-profile-list">
-            {props.roster.map((student) => (
+            {visibleFaceProfiles.map((student) => (
               <div key={student.id}>
                 <span>◎</span>
                 <strong>{student.fish}</strong>
@@ -978,6 +988,7 @@ function Settings(props: {
               </div>
             ))}
             {!props.roster.length && <div className="empty-state">Face ID bazasi hali yuklanmagan.</div>}
+            {Boolean(props.roster.length && !visibleFaceProfiles.length) && <div className="empty-state">Bu ism bo‘yicha Face ID profili topilmadi.</div>}
           </div>
           <div className="settings-footer"><small>Studentdagi noma’lum yuz so‘rovlari serverning Monitor qismida o‘qituvchi tomonidan tasdiqlanadi.</small><button className="primary" disabled={saving} onClick={() => void save()}>Face ID rejimini saqlash</button></div>
         </section>
