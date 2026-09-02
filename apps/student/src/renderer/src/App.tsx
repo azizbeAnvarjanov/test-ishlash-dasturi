@@ -16,7 +16,7 @@ import {
 } from '@test/shared'
 import { captureVideoPhoto, detectProctorFace, extractFaceDescriptor, prepareFaceEngine, prepareProctorEngine } from './face-engine'
 
-type Screen = 'setup' | 'identity' | 'tests' | 'exam' | 'completed'
+type Screen = 'setup' | 'settings' | 'identity' | 'tests' | 'exam' | 'completed'
 type ProctorStatus = 'loading' | 'ok' | 'warning' | 'error'
 type ProctorWarning = { count: number; message: string; final: boolean }
 type CameraDevice = { deviceId: string; label: string }
@@ -176,6 +176,12 @@ function App(): React.JSX.Element {
     } else {
       localStorage.removeItem(CAMERA_DEVICE_STORAGE_KEY)
     }
+  }, [])
+
+  const saveServerAddress = useCallback((nextServer: string): void => {
+    const address = normalizeServer(nextServer)
+    setServerInput(address)
+    localStorage.setItem('server', address)
   }, [])
 
   useEffect(() => {
@@ -479,10 +485,20 @@ function App(): React.JSX.Element {
         connecting={connecting}
         error={error}
         resultsDirectory={resultsDirectory}
-        selectedCameraId={selectedCameraId}
-        onServer={setServerInput}
-        onCamera={saveSelectedCameraId}
+        onSettings={() => setScreen('settings')}
         onConnect={() => void connectServer()}
+      />
+    )
+  }
+
+  if (screen === 'settings') {
+    return (
+      <StudentSettingsScreen
+        server={serverInput}
+        selectedCameraId={selectedCameraId}
+        onServer={saveServerAddress}
+        onCamera={saveSelectedCameraId}
+        onBack={() => setScreen('setup')}
       />
     )
   }
@@ -582,12 +598,51 @@ function SetupScreen(props: {
   connecting: boolean
   error: string
   resultsDirectory: string
+  onSettings: () => void
+  onConnect: () => void
+}): React.JSX.Element {
+  return (
+    <div className="setup-page">
+      <div className="setup-art">
+        <div className="art-content">
+          <img className="student-wordmark" src="/branding/logo.png" alt="Easy Testing Student" />
+          <h1>Easy Testing Student</h1>
+          <p>Avval serverga ulaning. Keyin student va ishlanadigan test alohida tanlanadi.</p>
+          <div className="feature"><span>✓</span><div><strong>Xavfsiz test rejimi</strong><small>Test paytida chiqish va klavish kombinatsiyalari bloklanadi</small></div></div>
+          <div className="feature"><span>✓</span><div><strong>Jonli monitoring</strong><small>Jarayon serverda savolma-savol ko‘rinadi</small></div></div>
+          <div className="feature"><span>✓</span><div><strong>Avtomatik saqlash</strong><small>Natija server va kompyuterda saqlanadi</small></div></div>
+        </div>
+        <div className="decor one" /><div className="decor two" />
+      </div>
+      <div className="setup-form-wrap">
+        <div className="setup-form">
+          <span className="eyebrow">1-QADAM · SERVER</span>
+          <h2>Serverga ulanish</h2>
+          <p className="lead">Server va student kompyuteri bir xil LAN yoki Wi-Fi tarmog‘ida bo‘lsin.</p>
+          {props.error && <div className="form-error">{props.error}</div>}
+          <div className="connection-summary">
+            <div><small>Server IP manzili</small><strong>{props.server}</strong></div>
+            <div><small>Kompyuter</small><strong>{props.computerName || 'Aniqlanmoqda...'}</strong></div>
+          </div>
+          <button className="settings-button" onClick={props.onSettings}><span>⚙</span><div><strong>Sozlamalar</strong><small>Server IP, kamera va dastur yangilanishi</small></div><b>→</b></button>
+          <button className="connect-button" disabled={props.connecting} onClick={props.onConnect}>{props.connecting ? 'Ulanmoqda...' : 'Serverga ulanish'} <b>→</b></button>
+          <button className="folder-button" onClick={() => void window.studentDesktop.openResults()}>Natijalar papkasini ochish</button>
+          <small className="path">{props.resultsDirectory}</small>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StudentSettingsScreen(props: {
+  server: string
   selectedCameraId: string
   onServer: (value: string) => void
   onCamera: (value: string) => void
-  onConnect: () => void
+  onBack: () => void
 }): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [serverDraft, setServerDraft] = useState(props.server)
   const [cameras, setCameras] = useState<CameraDevice[]>([])
   const [cameraLoading, setCameraLoading] = useState(false)
   const [cameraStatus, setCameraStatus] = useState('Kameralar aniqlanmoqda...')
@@ -682,27 +737,26 @@ function SetupScreen(props: {
   const downloadUpdate = async (): Promise<void> => setUpdateState(await window.studentDesktop.downloadUpdate())
   const installUpdate = async (): Promise<void> => setUpdateState(await window.studentDesktop.installUpdate())
 
+  const saveAndBack = (): void => {
+    if (!serverDraft.trim()) return
+    props.onServer(serverDraft)
+    props.onBack()
+  }
+
   return (
-    <div className="setup-page">
-      <div className="setup-art">
-        <div className="art-content">
-          <img className="student-wordmark" src="/branding/logo.png" alt="Easy Testing Student" />
-          <h1>Easy Testing Student</h1>
-          <p>Avval serverga ulaning. Keyin student va ishlanadigan test alohida tanlanadi.</p>
-          <div className="feature"><span>✓</span><div><strong>Xavfsiz test rejimi</strong><small>Test paytida chiqish va klavish kombinatsiyalari bloklanadi</small></div></div>
-          <div className="feature"><span>✓</span><div><strong>Jonli monitoring</strong><small>Jarayon serverda savolma-savol ko‘rinadi</small></div></div>
-          <div className="feature"><span>✓</span><div><strong>Avtomatik saqlash</strong><small>Natija server va kompyuterda saqlanadi</small></div></div>
-        </div>
-        <div className="decor one" /><div className="decor two" />
-      </div>
-      <div className="setup-form-wrap">
-        <div className="setup-form">
-          <span className="eyebrow">1-QADAM · SERVER</span>
-          <h2>Serverga ulanish</h2>
-          <p className="lead">Server va student kompyuteri bir xil LAN yoki Wi-Fi tarmog‘ida bo‘lsin.</p>
-          {props.error && <div className="form-error">{props.error}</div>}
-          <label><span>Server IP manzili</span><input value={props.server} onChange={(event) => props.onServer(event.target.value)} placeholder="Masalan: 192.168.1.10:4780" /></label>
-          <div className="computer-chip">Kompyuter: <strong>{props.computerName || 'Aniqlanmoqda...'}</strong></div>
+    <div className="student-settings-page">
+      <section className="student-settings-card">
+        <header className="student-settings-header">
+          <div><span className="eyebrow">EASY TESTING STUDENT</span><h1>Sozlamalar</h1><p>Ulanish, kamera va yangilanish parametrlarini shu yerda boshqaring.</p></div>
+          <button className="secondary-action" onClick={saveAndBack}>← Orqaga</button>
+        </header>
+        <div className="student-settings-grid">
+          <section className="settings-section server-settings-section">
+            <div className="settings-section-title"><span>⌁</span><div><h2>Server manzili</h2><p>Server kompyuterida ko‘rsatilgan lokal IP manzilni yozing.</p></div></div>
+            <label><span>IP manzil va port</span><input value={serverDraft} onChange={(event) => setServerDraft(event.target.value)} placeholder="Masalan: 192.168.1.10:4780" /></label>
+          </section>
+          <section className="settings-section">
+            <div className="settings-section-title"><span>◉</span><div><h2>Kamera</h2><p>Face ID va test nazorati uchun ishlatiladigan kamerani tanlang.</p></div></div>
           <div className="camera-settings">
             <div className="camera-settings-head">
               <span>Kamera sozlamasi</span>
@@ -730,6 +784,9 @@ function SetupScreen(props: {
             </div>
             <small>{cameraStatus}</small>
           </div>
+          </section>
+          <section className="settings-section update-settings-section">
+            <div className="settings-section-title"><span>↻</span><div><h2>Dastur yangilanishi</h2><p>Yangi Student versiyasini GitHub orqali tekshiring.</p></div></div>
           <div className="student-update-settings">
             <div className="student-update-row">
               <div><strong>Dastur yangilanishi</strong><small>{updateState.message}</small></div>
@@ -750,11 +807,10 @@ function SetupScreen(props: {
               </div>
             )}
           </div>
-          <button className="connect-button" disabled={props.connecting} onClick={props.onConnect}>{props.connecting ? 'Ulanmoqda...' : 'Serverga ulanish'} <b>→</b></button>
-          <button className="folder-button" onClick={() => void window.studentDesktop.openResults()}>Natijalar papkasini ochish</button>
-          <small className="path">{props.resultsDirectory}</small>
+          </section>
         </div>
-      </div>
+        <footer className="student-settings-footer"><small>O‘zgarishlar shu kompyuterda saqlanadi.</small><button className="connect-button compact" disabled={!serverDraft.trim()} onClick={saveAndBack}>Sozlamalarni saqlash</button></footer>
+      </section>
     </div>
   )
 }
